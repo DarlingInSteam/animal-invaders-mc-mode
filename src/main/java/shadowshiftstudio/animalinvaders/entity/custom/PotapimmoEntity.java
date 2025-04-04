@@ -64,7 +64,7 @@ public class PotapimmoEntity extends Monster {
         float f;
 
         if (this.getPose() == Pose.STANDING) {
-            f = Math.min(p_268283_ = 6F, 1f);
+            f = Math.min(p_268283_ * 6F, 1f);
         } else {
             f = 0f;
         }
@@ -109,7 +109,7 @@ public class PotapimmoEntity extends Monster {
                 .add(Attributes.ATTACK_DAMAGE, 8.0D)
                 .add(Attributes.ATTACK_SPEED, 1.0D)
                 .add(Attributes.FOLLOW_RANGE, 16.0D)
-                .add(Attributes.MOVEMENT_SPEED, 0.15D)
+                .add(Attributes.MOVEMENT_SPEED, 0.18D)
                 .add(Attributes.ARMOR, 3.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 1.0D)
                 .add(Attributes.ATTACK_KNOCKBACK, 5.0D);
