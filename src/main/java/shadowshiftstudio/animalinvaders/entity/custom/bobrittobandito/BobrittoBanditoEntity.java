@@ -24,6 +24,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import shadowshiftstudio.animalinvaders.entity.ai.bobrittobandito.BobrittoBanditoAttack;
+import shadowshiftstudio.animalinvaders.entity.utils.EntityUtils;
 
 public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
     // Синхронизированные данные
@@ -109,78 +110,56 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
                     this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.4D);
                     runTimeout = 5;
                 } else {
-                    if (runTimeout <= 0) {
+                    // Используем утилитный метод для обработки таймаута
+                    runTimeout = EntityUtils.handleAnimationTimeout(runTimeout, () -> {
                         this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.25D);
-                    } else {
-                        runTimeout--;
-                    }
+                    });
                 }
                 
-                // Управление таймаутом стрельбы
-                if (shootingTimeout > 0) {
-                    shootingTimeout--;
-                    // Когда таймаут заканчивается, выключаем анимацию
-                    if (shootingTimeout == 0) {
-                        setShooting(false);
-                    }
-                }
+                // Используем утилитный метод для обработки таймаутов
+                shootingTimeout = EntityUtils.handleAnimationTimeout(shootingTimeout, () -> {
+                    setShooting(false);
+                });
                 
-                if (shootCooldown > 0) {
-                    shootCooldown--;
-                }
+                shootCooldown = EntityUtils.handleAnimationTimeout(shootCooldown, null);
             } else {
-                if (runTimeout <= 0) {
+                // Используем утилитный метод для обработки таймаута
+                runTimeout = EntityUtils.handleAnimationTimeout(runTimeout, () -> {
                     setRunning(false);
                     this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.25D);
-                } else {
-                    runTimeout--;
-                }
+                });
                 
-                if (shootingTimeout > 0) {
-                    shootingTimeout--;
-                    if (shootingTimeout == 0) {
-                        setShooting(false);
-                    }
-                }
+                // Используем утилитный метод для обработки таймаута
+                shootingTimeout = EntityUtils.handleAnimationTimeout(shootingTimeout, () -> {
+                    setShooting(false);
+                });
             }
         }
 
         if (this.level().isClientSide()) {
             // Анимация стрельбы переопределяет другие анимации, но не останавливает их
             if (this.isShooting()) {
-                // Продолжаем анимацию стрельбы независимо от других анимаций
                 this.attackAnimationState.startIfStopped(this.tickCount);
             } else {
                 this.attackAnimationState.stop();
             }
 
-            // Анимации движения
-            if (this.isRunning() && this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
-                this.runAnimationState.startIfStopped(this.tickCount);
-                this.walkAnimationState.stop();
-                this.idleAnimationState.stop();
-            } else if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
-                this.walkAnimationState.startIfStopped(this.tickCount);
-                this.runAnimationState.stop();
-                this.idleAnimationState.stop();
-            } else {
-                this.idleAnimationState.startIfStopped(this.tickCount);
-                this.walkAnimationState.stop();
-                this.runAnimationState.stop();
-            }
+            // Используем утилитный метод для управления анимациями движения
+            EntityUtils.handleMovementAnimations(
+                this.isRunning(), 
+                this, 
+                this.runAnimationState, 
+                this.walkAnimationState, 
+                this.idleAnimationState, 
+                this.tickCount
+            );
         }
     }
 
     @Override
     protected void updateWalkAnimation(float partialTicks) {
-        float f;
-        if (this.getPose() == Pose.STANDING) {
-            f = Math.min(partialTicks * 6.0F, 1.0F);
-        } else {
-            f = 0.0F;
-        }
-
-        this.walkAnimation.update(f, 0.2F);
+        // Используем утилитный метод для обновления анимации ходьбы
+        EntityUtils.updateWalkAnimation(this, partialTicks);
     }
 
     @Override

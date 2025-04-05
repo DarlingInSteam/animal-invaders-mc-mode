@@ -20,6 +20,8 @@ import shadowshiftstudio.animalinvaders.entity.ModEntities;
 import shadowshiftstudio.animalinvaders.entity.client.bullet.BulletRenderer;
 import shadowshiftstudio.animalinvaders.entity.client.potapimmo.PotapimmoRenderer;
 import shadowshiftstudio.animalinvaders.entity.client.bobrittobandito.BobrittoBanditoRenderer;
+import shadowshiftstudio.animalinvaders.item.ModCreativeModeTabs;
+import shadowshiftstudio.animalinvaders.item.ModItems;
 
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(AnimalInvaders.MOD_ID)
@@ -34,7 +36,12 @@ public class AnimalInvaders
         modEventBus.addListener(this::commonSetup);
         MinecraftForge.EVENT_BUS.register(this);
         modEventBus.addListener(this::addCreative);
+
+        // Register items and creative mode tabs
+        ModItems.register(modEventBus);
+        ModCreativeModeTabs.register(modEventBus);
         ModEntities.register(modEventBus);
+
         context.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
     }
 

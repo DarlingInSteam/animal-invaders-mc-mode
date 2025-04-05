@@ -15,6 +15,7 @@ import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.entity.player.Player;
 import shadowshiftstudio.animalinvaders.entity.ai.potapimmo.PotapimmoAttack;
+import shadowshiftstudio.animalinvaders.entity.utils.EntityUtils;
 
 public class PotapimmoEntity extends Monster {
     public PotapimmoEntity(EntityType<? extends Monster> entityType, Level level) {
@@ -26,7 +27,7 @@ public class PotapimmoEntity extends Monster {
 
     public final AnimationState idleAnimationState = new AnimationState();
     public final AnimationState attackAnimationState = new AnimationState();
-    private int timeoutAnimationState = 0;
+    private final int[] timeoutAnimationState = new int[1];
     public int attackingAnimationsTimeout = 0;
 
     @Override
@@ -34,15 +35,17 @@ public class PotapimmoEntity extends Monster {
         super.tick();
 
         if (this.level().isClientSide()) {
-            setUpAnimationsStates();
+            // Используем утилитный метод для управления анимацией простоя
+            EntityUtils.setupIdleAnimation(idleAnimationState, this.tickCount, timeoutAnimationState);
         }
 
         if (this.isAttacking() && attackingAnimationsTimeout <= 0) {
             attackingAnimationsTimeout = 60;
-            this.idleAnimationState.stop();
-            attackAnimationState.start(this.tickCount);
+            // Используем утилитный метод для переключения анимаций
+            EntityUtils.switchAnimation(idleAnimationState, attackAnimationState, this.tickCount);
         } else {
-            --this.attackingAnimationsTimeout;
+            // Используем утилитный метод для обработки таймаута
+            attackingAnimationsTimeout = EntityUtils.handleAnimationTimeout(attackingAnimationsTimeout, null);
         }
 
         if (!this.isAttacking()) {
@@ -50,26 +53,10 @@ public class PotapimmoEntity extends Monster {
         }
     }
 
-    private void setUpAnimationsStates() {
-        if (timeoutAnimationState <= 0) {
-            this.timeoutAnimationState = this.random.nextInt(40) + 80;
-            this.idleAnimationState.start(this.tickCount);
-        } else {
-            --this.timeoutAnimationState;
-        }
-    }
-
     @Override
-    protected void updateWalkAnimation(float p_268283_) {
-        float f;
-
-        if (this.getPose() == Pose.STANDING) {
-            f = Math.min(p_268283_ * 6F, 1f);
-        } else {
-            f = 0f;
-        }
-
-        this.walkAnimation.update(f, 0.2f);
+    protected void updateWalkAnimation(float partialTicks) {
+        // Используем утилитный метод для обновления анимации ходьбы
+        EntityUtils.updateWalkAnimation(this, partialTicks);
     }
 
     public void setAttacking(boolean attacking) {
@@ -101,6 +88,8 @@ public class PotapimmoEntity extends Monster {
 
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this).setAlertOthers());
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
+        this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, Monster.class, true, 
+            (entity) -> !(entity instanceof PotapimmoEntity)));
     }
 
     public static AttributeSupplier.Builder createAttributes() {
