@@ -6,10 +6,7 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.AnimationState;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.*;
@@ -66,6 +63,8 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
 
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this).setAlertOthers());
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
+        this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, net.minecraft.world.entity.monster.Skeleton.class, true));
+        this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, net.minecraft.world.entity.monster.Pillager.class, true));
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -192,6 +191,36 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
             this.playSound(SoundEvents.SKELETON_SHOOT, 1.0F, 1.0F / (this.getRandom().nextFloat() * 0.4F + 0.8F));
             this.level().addFreshEntity(arrow);
         }
+    }
+
+    @Override
+    public boolean hurt(DamageSource source, float amount) {
+        // Вызываем базовый метод для обработки урона
+        boolean wasHurt = super.hurt(source, amount);
+        
+        // Если был нанесен урон и мы на сервере
+        if (wasHurt && !this.level().isClientSide()) {
+            // Получаем сущность, которая нанесла урон
+            Entity attacker = source.getEntity();
+            
+            // Проверяем, что атакующий существует и это не BobritoBandito
+            if (attacker != null && !(attacker instanceof BobrittoBanditoEntity)) {
+                // Находим всех BobritoBandito в радиусе 32 блоков
+                this.level().getEntitiesOfClass(BobrittoBanditoEntity.class, 
+                        this.getBoundingBox().inflate(32.0), 
+                        bandito -> bandito != this) // исключаем самого себя
+                    .forEach(bandito -> {
+                        // Устанавливаем атакующего как цель для каждого бандито
+                        if (attacker instanceof LivingEntity) {
+                            bandito.setTarget((LivingEntity) attacker);
+                            // Делаем так, чтобы бандито смотрел в сторону атакующего
+                            bandito.getLookControl().setLookAt(attacker, 30.0F, 30.0F);
+                        }
+                    });
+            }
+        }
+        
+        return wasHurt;
     }
 
     @Override

@@ -72,7 +72,15 @@ public class BobrittoBanditoAttack extends Goal {
 
     public void tick() {
         LivingEntity target = this.mob.getTarget();
-        if (target == null) {
+        if (target == null || !target.isAlive()) {
+            // Сбрасываем состояние атаки, если цель не существует или мертва
+            this.mob.setShooting(false);
+            attackTime = -1;
+            burstCount = 0;
+            burstCooldown = 0;
+            attackPhase = 0;
+            // Очищаем цель
+            this.mob.setTarget(null);
             return;
         }
 
