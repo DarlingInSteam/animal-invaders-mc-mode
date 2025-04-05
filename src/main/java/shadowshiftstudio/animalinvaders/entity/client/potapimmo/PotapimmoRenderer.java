@@ -1,4 +1,4 @@
-package shadowshiftstudio.animalinvaders.entity.client;
+package shadowshiftstudio.animalinvaders.entity.client.potapimmo;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -6,7 +6,7 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.resources.ResourceLocation;
 import shadowshiftstudio.animalinvaders.AnimalInvaders;
-import shadowshiftstudio.animalinvaders.entity.custom.PotapimmoEntity;
+import shadowshiftstudio.animalinvaders.entity.custom.potapimmo.PotapimmoEntity;
 
 public class PotapimmoRenderer extends MobRenderer<PotapimmoEntity, PotapimmoModel<PotapimmoEntity>> {
     public PotapimmoRenderer(EntityRendererProvider.Context p_174304_) {

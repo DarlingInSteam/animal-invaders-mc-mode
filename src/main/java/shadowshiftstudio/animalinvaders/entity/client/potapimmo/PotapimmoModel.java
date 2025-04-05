@@ -1,4 +1,4 @@
-package shadowshiftstudio.animalinvaders.entity.client;// Made with Blockbench 4.12.4
+package shadowshiftstudio.animalinvaders.entity.client.potapimmo;// Made with Blockbench 4.12.4
 // Exported for Minecraft version 1.17 or later with Mojang mappings
 // Paste this class into your mod and generate all required imports
 
@@ -13,8 +13,9 @@ import net.minecraft.client.model.geom.builders.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
-import shadowshiftstudio.animalinvaders.entity.animations.PotapimmoAnimationsDefinitions;
-import shadowshiftstudio.animalinvaders.entity.custom.PotapimmoEntity;
+import shadowshiftstudio.animalinvaders.entity.animations.potapimmo.PotapimmoAnimationsDefinitions;
+import shadowshiftstudio.animalinvaders.entity.custom.potapimmo.PotapimmoEntity;
+import shadowshiftstudio.animalinvaders.entity.utils.EntityUtils;
 
 public class PotapimmoModel<T extends Entity> extends HierarchicalModel<T> {
 	// This layer location should be baked with EntityRendererProvider.Context in the entity renderer and passed into this model's constructor
@@ -146,11 +147,11 @@ public class PotapimmoModel<T extends Entity> extends HierarchicalModel<T> {
 	}
 
 	private void applyHeadRotation(float pNetHeadYaw, float pHeadPitch, float pAgeInTicks) {
-		pNetHeadYaw = Mth.clamp(pNetHeadYaw, -30.0F, 30.0F);
-		pHeadPitch = Mth.clamp(pHeadPitch, -25.0F, 45.0F);
-
-		this.head.yRot = pNetHeadYaw * ((float)Math.PI / 180F);
-		this.head.xRot = pHeadPitch * ((float)Math.PI / 180F);
+		EntityUtils.applyHeadRotation(
+				this.head,
+				pNetHeadYaw,
+				pHeadPitch
+		);
 	}
 
 	@Override

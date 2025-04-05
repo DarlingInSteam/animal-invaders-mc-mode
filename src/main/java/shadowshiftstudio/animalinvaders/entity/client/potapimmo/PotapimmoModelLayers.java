@@ -1,4 +1,4 @@
-package shadowshiftstudio.animalinvaders.entity.client;
+package shadowshiftstudio.animalinvaders.entity.client.potapimmo;
 
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.resources.ResourceLocation;

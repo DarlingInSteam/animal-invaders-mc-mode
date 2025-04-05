@@ -1,8 +1,6 @@
 package shadowshiftstudio.animalinvaders;
 
 import com.mojang.logging.LogUtils;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.api.distmarker.Dist;
@@ -19,7 +17,8 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.slf4j.Logger;
 import shadowshiftstudio.animalinvaders.entity.ModEntities;
-import shadowshiftstudio.animalinvaders.entity.client.PotapimmoRenderer;
+import shadowshiftstudio.animalinvaders.entity.client.potapimmo.PotapimmoRenderer;
+import shadowshiftstudio.animalinvaders.entity.client.bobrittobandito.BobrittoBanditoRenderer;
 
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(AnimalInvaders.MOD_ID)
@@ -73,6 +72,7 @@ public class AnimalInvaders
         public static void onClientSetup(FMLClientSetupEvent event)
         {
             EntityRenderers.register(ModEntities.POTAPIMMO.get(), PotapimmoRenderer::new);
+            EntityRenderers.register(ModEntities.BOBRITO_BANDITO.get(), BobrittoBanditoRenderer::new);
         }
     }
 }

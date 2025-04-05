@@ -1,4 +1,4 @@
-package shadowshiftstudio.animalinvaders.entity.custom;
+package shadowshiftstudio.animalinvaders.entity.custom.potapimmo;
 
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
