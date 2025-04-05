@@ -1,4 +1,4 @@
-package shadowshiftstudio.animalinvaders.entity.ai;
+package shadowshiftstudio.animalinvaders.entity.ai.potapimmo;
 
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;

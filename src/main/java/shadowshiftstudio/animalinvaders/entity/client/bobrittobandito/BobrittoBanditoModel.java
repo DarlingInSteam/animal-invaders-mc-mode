@@ -34,15 +34,15 @@ public class BobrittoBanditoModel<T extends Entity> extends HierarchicalModel<T>
     public BobrittoBanditoModel(ModelPart root) {
         this.bobrittobandito = root.getChild("bobrittobandito");
         this.body = this.bobrittobandito.getChild("body");
-        this.hand1 = this.bobrittobandito.getChild("hand1");
-        this.hand2 = this.bobrittobandito.getChild("hand2");
         this.leg1 = this.bobrittobandito.getChild("leg1");
         this.leg2 = this.bobrittobandito.getChild("leg2");
         this.head = this.bobrittobandito.getChild("head");
         this.hat = this.head.getChild("hat");
         this.mouth = this.head.getChild("mouth");
         this.glasses = this.head.getChild("glasses");
-        this.gun = this.bobrittobandito.getChild("gun");
+        this.hand1 = this.head.getChild("hand1");
+        this.hand2 = this.head.getChild("hand2");
+        this.gun = this.head.getChild("gun");
         this.magazine = this.gun.getChild("magazine");
     }
 
@@ -55,18 +55,6 @@ public class BobrittoBanditoModel<T extends Entity> extends HierarchicalModel<T>
         PartDefinition body = bobritto.addOrReplaceChild("body", CubeListBuilder.create(), PartPose.offset(0.0F, -12.0F, 0.0F));
 
         PartDefinition body_r1 = body.addOrReplaceChild("body_r1", CubeListBuilder.create().texOffs(0, 0).addBox(-6.0F, -12.0F, -3.0F, 12.0F, 12.0F, 6.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.0F, 2.0F, 0.0F, -0.0886F, 0.1739F, -0.0154F));
-
-        PartDefinition hand1 = bobritto.addOrReplaceChild("hand1", CubeListBuilder.create(), PartPose.offsetAndRotation(-6.25F, -19.0F, 2.0F, -0.3961F, 0.134F, -0.0088F));
-
-        PartDefinition arm_r1 = hand1.addOrReplaceChild("arm_r1", CubeListBuilder.create().texOffs(0, 57).addBox(-1.5F, 0.0F, -1.25F, 3.0F, 6.0F, 3.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(4.75F, -0.6956F, 5.203F, 1.6424F, 1.0624F, -0.322F));
-
-        PartDefinition hand_r1 = hand1.addOrReplaceChild("hand_r1", CubeListBuilder.create().texOffs(50, 48).addBox(-1.5F, 0.0F, -1.25F, 3.0F, 7.0F, 3.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.25F, 0.25F, 0.0F, 1.6771F, 0.6778F, -0.1063F));
-
-        PartDefinition hand2 = bobritto.addOrReplaceChild("hand2", CubeListBuilder.create(), PartPose.offsetAndRotation(6.25F, -18.5F, 0.5F, -0.3052F, -0.0131F, -0.0416F));
-
-        PartDefinition arm_r2 = hand2.addOrReplaceChild("arm_r2", CubeListBuilder.create().texOffs(13, 57).addBox(-1.0F, 0.0F, -1.0F, 3.0F, 6.0F, 3.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-0.25F, 0.25F, 0.25F, 1.3597F, 0.595F, -0.2843F));
-
-        PartDefinition hand_r2 = hand2.addOrReplaceChild("hand_r2", CubeListBuilder.create().texOffs(54, 0).addBox(-1.5F, 0.0F, -1.0F, 3.0F, 6.0F, 3.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(3.75F, 0.3044F, 4.203F, 2.2923F, -0.5528F, -0.369F));
 
         PartDefinition leg1 = bobritto.addOrReplaceChild("leg1", CubeListBuilder.create().texOffs(33, 43).addBox(-1.5F, 0.0F, -2.0F, 4.0F, 11.0F, 4.0F, new CubeDeformation(0.0F))
                 .texOffs(0, 48).addBox(-1.5F, 11.0F, -2.0F, 4.0F, 2.0F, 6.0F, new CubeDeformation(0.0F)), PartPose.offset(-3.5F, -13.0F, 0.0F));
@@ -88,9 +76,21 @@ public class BobrittoBanditoModel<T extends Entity> extends HierarchicalModel<T>
                 .texOffs(48, 28).addBox(1.0F, 0.0F, 5.0F, 2.0F, 1.0F, 1.0F, new CubeDeformation(0.0F))
                 .texOffs(50, 58).addBox(4.0F, -1.0F, -1.0F, 1.0F, 1.0F, 6.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, -6.0F, -1.0F));
 
-        PartDefinition gun = bobritto.addOrReplaceChild("gun", CubeListBuilder.create().texOffs(3, 70).addBox(-2.25F, -1.0F, -0.5F, 13.0F, 1.0F, 1.0F, new CubeDeformation(0.0F))
+        PartDefinition hand1 = head.addOrReplaceChild("hand1", CubeListBuilder.create(), PartPose.offsetAndRotation(-6.25F, 3.0F, 2.0F, -0.3961F, 0.134F, -0.0088F));
+
+        PartDefinition arm_r1 = hand1.addOrReplaceChild("arm_r1", CubeListBuilder.create().texOffs(0, 57).addBox(-1.5F, 0.0F, -1.25F, 3.0F, 6.0F, 3.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(4.75F, -0.6956F, 5.203F, 1.6424F, 1.0624F, -0.322F));
+
+        PartDefinition hand_r1 = hand1.addOrReplaceChild("hand_r1", CubeListBuilder.create().texOffs(50, 48).addBox(-1.5F, 0.0F, -1.25F, 3.0F, 7.0F, 3.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(0.25F, 0.25F, 0.0F, 1.6771F, 0.6778F, -0.1063F));
+
+        PartDefinition hand2 = head.addOrReplaceChild("hand2", CubeListBuilder.create(), PartPose.offsetAndRotation(6.25F, 3.5F, 0.5F, -0.3052F, -0.0131F, -0.0416F));
+
+        PartDefinition arm_r2 = hand2.addOrReplaceChild("arm_r2", CubeListBuilder.create().texOffs(13, 57).addBox(-1.0F, 0.0F, -1.0F, 3.0F, 6.0F, 3.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-0.25F, 0.25F, 0.25F, 1.3597F, 0.595F, -0.2843F));
+
+        PartDefinition hand_r2 = hand2.addOrReplaceChild("hand_r2", CubeListBuilder.create().texOffs(54, 0).addBox(-1.5F, 0.0F, -1.0F, 3.0F, 6.0F, 3.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(3.75F, 0.3044F, 4.203F, 2.2923F, -0.5528F, -0.369F));
+
+        PartDefinition gun = head.addOrReplaceChild("gun", CubeListBuilder.create().texOffs(3, 70).addBox(-2.25F, -1.0F, -0.5F, 13.0F, 1.0F, 1.0F, new CubeDeformation(0.0F))
                 .texOffs(15, 70).addBox(8.75F, -2.0F, 0.5F, 1.0F, 0.0F, 0.0F, new CubeDeformation(0.0F))
-                .texOffs(14, 73).addBox(8.25F, -2.0F, -0.5F, 1.0F, 1.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(5.25F, -21.25F, 7.25F, -3.081F, -1.3679F, 2.7347F));
+                .texOffs(14, 73).addBox(8.25F, -2.0F, -0.5F, 1.0F, 1.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(5.25F, 0.75F, 7.25F, -3.081F, -1.3679F, 2.7347F));
 
         PartDefinition cube_r1 = gun.addOrReplaceChild("cube_r1", CubeListBuilder.create().texOffs(39, 86).addBox(-5.0F, 0.0F, -0.4F, 5.0F, 1.0F, 1.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-1.25F, -1.0F, 0.0F, 0.0F, 0.0F, -0.3054F));
 

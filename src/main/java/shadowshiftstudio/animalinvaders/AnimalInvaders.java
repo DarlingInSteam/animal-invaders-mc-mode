@@ -17,6 +17,7 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.slf4j.Logger;
 import shadowshiftstudio.animalinvaders.entity.ModEntities;
+import shadowshiftstudio.animalinvaders.entity.client.bullet.BulletRenderer;
 import shadowshiftstudio.animalinvaders.entity.client.potapimmo.PotapimmoRenderer;
 import shadowshiftstudio.animalinvaders.entity.client.bobrittobandito.BobrittoBanditoRenderer;
 
@@ -73,6 +74,7 @@ public class AnimalInvaders
         {
             EntityRenderers.register(ModEntities.POTAPIMMO.get(), PotapimmoRenderer::new);
             EntityRenderers.register(ModEntities.BOBRITO_BANDITO.get(), BobrittoBanditoRenderer::new);
+            EntityRenderers.register(ModEntities.BULLET.get(), BulletRenderer::new);
         }
     }
 }

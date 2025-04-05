@@ -14,7 +14,7 @@ import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.entity.player.Player;
-import shadowshiftstudio.animalinvaders.entity.ai.PotapimmoAttack;
+import shadowshiftstudio.animalinvaders.entity.ai.potapimmo.PotapimmoAttack;
 
 public class PotapimmoEntity extends Monster {
     public PotapimmoEntity(EntityType<? extends Monster> entityType, Level level) {

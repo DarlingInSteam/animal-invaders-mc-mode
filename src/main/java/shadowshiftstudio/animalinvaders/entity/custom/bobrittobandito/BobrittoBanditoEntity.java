@@ -23,6 +23,7 @@ import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import shadowshiftstudio.animalinvaders.entity.ai.bobrittobandito.BobrittoBanditoAttack;
 
 public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
     // Синхронизированные данные
@@ -56,7 +57,7 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(1, new RangedAttackGoal(this, 1.5D, 20, 15.0F));
+        this.goalSelector.addGoal(1, new BobrittoBanditoAttack(this, 1.5D, 10, 20.0F));
         this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.2D, false));
         this.goalSelector.addGoal(3, new WaterAvoidingRandomStrollGoal(this, 1.0D));
         this.goalSelector.addGoal(4, new RandomLookAroundGoal(this));
@@ -99,21 +100,10 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
         super.tick();
 
         if (!this.level().isClientSide()) {
-            if (shootingTimeout > 0) {
-                shootingTimeout--;
-                if (shootingTimeout <= 0) {
-                    setShooting(false);
-                }
-            }
-
-            if (shootCooldown > 0) {
-                shootCooldown--;
-            }
-
             LivingEntity target = getTarget();
             if (target != null && target.isAlive()) {
                 double distSq = this.distanceToSqr(target);
-                setRunning(distSq <= 256.0D);
+                setRunning(distSq <= 256.0D && distSq > 25.0D);
 
                 if (isRunning()) {
                     this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.4D);
@@ -125,6 +115,19 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
                         runTimeout--;
                     }
                 }
+                
+                // Управление таймаутом стрельбы
+                if (shootingTimeout > 0) {
+                    shootingTimeout--;
+                    // Когда таймаут заканчивается, выключаем анимацию
+                    if (shootingTimeout == 0) {
+                        setShooting(false);
+                    }
+                }
+                
+                if (shootCooldown > 0) {
+                    shootCooldown--;
+                }
             } else {
                 if (runTimeout <= 0) {
                     setRunning(false);
@@ -132,31 +135,38 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
                 } else {
                     runTimeout--;
                 }
+                
+                if (shootingTimeout > 0) {
+                    shootingTimeout--;
+                    if (shootingTimeout == 0) {
+                        setShooting(false);
+                    }
+                }
             }
         }
 
         if (this.level().isClientSide()) {
+            // Анимация стрельбы переопределяет другие анимации, но не останавливает их
             if (this.isShooting()) {
+                // Продолжаем анимацию стрельбы независимо от других анимаций
                 this.attackAnimationState.startIfStopped(this.tickCount);
-                this.idleAnimationState.stop();
-                this.runAnimationState.stop();
-                this.walkAnimationState.stop();
             } else {
                 this.attackAnimationState.stop();
+            }
 
-                if (this.isRunning()) {
-                    this.runAnimationState.startIfStopped(this.tickCount);
-                    this.walkAnimationState.stop();
-                    this.idleAnimationState.stop();
-                } else if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
-                    this.walkAnimationState.startIfStopped(this.tickCount);
-                    this.idleAnimationState.stop();
-                    this.runAnimationState.stop();
-                } else {
-                    this.idleAnimationState.startIfStopped(this.tickCount);
-                    this.walkAnimationState.stop();
-                    this.runAnimationState.stop();
-                }
+            // Анимации движения
+            if (this.isRunning() && this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
+                this.runAnimationState.startIfStopped(this.tickCount);
+                this.walkAnimationState.stop();
+                this.idleAnimationState.stop();
+            } else if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
+                this.walkAnimationState.startIfStopped(this.tickCount);
+                this.runAnimationState.stop();
+                this.idleAnimationState.stop();
+            } else {
+                this.idleAnimationState.startIfStopped(this.tickCount);
+                this.walkAnimationState.stop();
+                this.runAnimationState.stop();
             }
         }
     }
@@ -180,11 +190,18 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
         }
 
         setShooting(true);
-        shootingTimeout = 90; // 4.5 секунды (длительность анимации)
+        shootingTimeout = 110; // Увеличено с 90 до 110 тиков (подготовка + стрельба + увеличенная перезарядка)
         shootCooldown = 20; // 1 секунда кулдауна между выстрелами
 
         if (!this.level().isClientSide) {
             AbstractArrow arrow = ProjectileUtil.getMobArrow(this, new ItemStack(Items.ARROW), velocity);
+            
+            // Настройки стрелы: добавляем гравитацию, убираем рикошет, стрела исчезает после столкновения
+            arrow.setNoGravity(false); // Включаем гравитацию
+            arrow.setPierceLevel((byte)0); // Нет пробивания
+            arrow.setSoundEvent(SoundEvents.ARROW_HIT); // Звук при попадании
+            arrow.setNoPhysics(false); // Включаем физику
+            
             double d0 = target.getX() - this.getX();
             double d1 = target.getY(0.3333333333333333D) - arrow.getY();
             double d2 = target.getZ() - this.getZ();
