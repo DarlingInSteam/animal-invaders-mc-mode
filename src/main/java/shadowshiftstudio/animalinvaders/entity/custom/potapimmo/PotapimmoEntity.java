@@ -7,20 +7,25 @@ import net.minecraft.util.TimeUtil;
 import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.entity.AnimationState;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.monster.Monster;
-import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.NeutralMob;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.SpawnGroupData;
+import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.RandomSource;
 import java.util.UUID;
+
 import shadowshiftstudio.animalinvaders.entity.ai.potapimmo.PotapimmoAttack;
 import shadowshiftstudio.animalinvaders.entity.utils.EntityUtils;
 import shadowshiftstudio.animalinvaders.entity.goal.PotapimmoTargetDeadAnimalGoal;
@@ -173,5 +178,43 @@ public class PotapimmoEntity extends Monster implements NeutralMob {
             this.setRemainingPersistentAngerTime(400); // Злится в течение 20 секунд
             this.setPersistentAngerTarget(player.getUUID());
         }
+    }
+
+    /**
+     * Проверяет, могут ли потапиммо спавниться в данной позиции.
+     * Позволяет спавниться и днем и ночью в отличие от других монстров.
+     */
+    public static boolean checkPotapimmoSpawnRules(EntityType<PotapimmoEntity> entityType, 
+                                                  ServerLevelAccessor level,
+                                                  MobSpawnType spawnType, 
+                                                  BlockPos pos, 
+                                                  RandomSource random) {
+        if (spawnType == MobSpawnType.NATURAL) {
+            // Проверяем только, что внизу твердый блок, но игнорируем проверку на свет
+            // В отличие от стандартного Monster::checkMonsterSpawnRules, который спавнит только ночью
+            return level.getBlockState(pos.below()).isValidSpawn(level, pos.below(), entityType);
+        }
+        
+        // Для других типов спавна используем стандартную проверку
+        return Monster.checkMonsterSpawnRules(entityType, level, spawnType, pos, random);
+    }
+
+    /**
+     * Инициализация дополнительных данных при спавне.
+     * Можно настроить дополнительные свойства энтити при создании.
+     */
+    @Override
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, 
+                                        net.minecraft.world.DifficultyInstance difficulty, 
+                                        MobSpawnType reason, 
+                                        SpawnGroupData spawnData, 
+                                        CompoundTag dataTag) {
+        // При спавне группы потапиммо, один из них будет лидером
+        if (random.nextFloat() < 0.2f && reason == MobSpawnType.NATURAL) {
+            // Увеличиваем размер и здоровье для лидера группы
+            this.setHealth(this.getMaxHealth() * 1.5f);
+        }
+        
+        return super.finalizeSpawn(level, difficulty, reason, spawnData, dataTag);
     }
 }

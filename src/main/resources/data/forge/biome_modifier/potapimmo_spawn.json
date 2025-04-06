@@ -1,0 +1,18 @@
+{
+  "type": "animalinvaders:potapimmo_spawn",
+  "biomes": "#minecraft:is_green",
+  "addition": {
+    "value": {
+      "spawners": {
+        "monster": [
+          {
+            "type": "animalinvaders:potapimmo",
+            "weight": 100,
+            "minCount": 3,
+            "maxCount": 5
+          }
+        ]
+      }
+    }
+  }
+}
