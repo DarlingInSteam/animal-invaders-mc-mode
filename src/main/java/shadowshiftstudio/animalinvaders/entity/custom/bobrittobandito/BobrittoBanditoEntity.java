@@ -32,6 +32,14 @@ import shadowshiftstudio.animalinvaders.entity.ai.bobrittobandito.BobrittoPatrol
 import shadowshiftstudio.animalinvaders.entity.ai.bobrittobandito.BobrittoSettlementWanderGoal;
 import shadowshiftstudio.animalinvaders.entity.ai.bobrittobandito.BobrittoBanditoAttack;
 import shadowshiftstudio.animalinvaders.entity.utils.EntityUtils;
+import shadowshiftstudio.animalinvaders.entity.custom.potapimmo.PotapimmoEntity;
+import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.npc.AbstractVillager;
+import net.minecraft.world.entity.animal.IronGolem;
+import net.minecraft.world.entity.npc.WanderingTrader;
+import net.minecraft.world.entity.AgeableMob;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobCategory;
 
 import java.util.UUID;
 
@@ -119,7 +127,30 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
             }
         }.setAlertOthers());
         
+        // Атака игроков - высокий приоритет
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
+        
+        // Атака на потапиммо - такой же высокий приоритет
+        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, PotapimmoEntity.class, true));
+        
+        // Нападаем на жителей
+        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Villager.class, true));
+        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, AbstractVillager.class, true));
+        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, WanderingTrader.class, true));
+        
+        // Атака железных големов
+        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, IronGolem.class, true));
+        
+        // Атака других мобов
+        this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, Mob.class, 10, true, false, (mob) -> {
+            // Атакуем любые существа, которые не являются монстрами и не являются бобритто
+            return mob instanceof AgeableMob && 
+                   !(mob instanceof BobrittoBanditoEntity) && 
+                   mob.getMobType() != MobType.UNDEAD &&
+                   mob.getMobType() != MobType.ARTHROPOD;
+        }));
+        
+        // Сохраняем атаку на скелетов и разбойников
         this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, net.minecraft.world.entity.monster.Skeleton.class, true));
         this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, net.minecraft.world.entity.monster.Pillager.class, true));
     }
@@ -275,15 +306,20 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
 
     @Override
     public boolean hurt(DamageSource source, float amount) {
+        // Проверяем, не наносит ли урон другой бобритто
+        Entity attacker = source.getEntity();
+        
+        // Если атакует другой бобритто - отменяем урон
+        if (attacker instanceof BobrittoBanditoEntity) {
+            return false;
+        }
+        
         // Вызываем базовый метод для обработки урона
         boolean wasHurt = super.hurt(source, amount);
         
         // Если был нанесен урон и мы на сервере
         if (wasHurt && !this.level().isClientSide()) {
             // Получаем сущность, которая нанесла урон
-            Entity attacker = source.getEntity();
-            
-            // Проверяем, что атакующий существует и это не BobritoBandito
             if (attacker != null && !(attacker instanceof BobrittoBanditoEntity)) {
                 // Находим всех BobritoBandito в радиусе 32 блоков
                 this.level().getEntitiesOfClass(BobrittoBanditoEntity.class, 
