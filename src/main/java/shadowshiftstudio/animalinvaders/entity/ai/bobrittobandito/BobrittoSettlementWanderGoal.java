@@ -14,10 +14,12 @@ import javax.annotation.Nullable;
  */
 public class BobrittoSettlementWanderGoal extends RandomStrollGoal {
     private final BobrittoBanditoEntity bobrito;
-    private static final int SETTLEMENT_RADIUS = 15; // Радиус перемещения внутри поселения
+    private static final int SETTLEMENT_RADIUS = 70; // Радиус перемещения внутри поселения
     private static final int MOVEMENT_INTERVAL = 60; // Частота смены направления в тиках (3 секунды)
-    private static final int MAX_DISTANCE_FROM_CENTER = 25; // Максимальное расстояние от центра поселения (блоки)
+    private static final int MAX_DISTANCE_FROM_CENTER = 80; // Максимальное расстояние от центра поселения (блоки)
     private Vec3 lastPosition; // Последняя позиция для проверки, не вышли ли за пределы
+    private boolean isReturningToSettlement = false; // Флаг, указывающий, что бобритто возвращается в поселение
+    private int failedReturnAttempts = 0; // Счетчик неудачных попыток вернуться
 
     public BobrittoSettlementWanderGoal(BobrittoBanditoEntity bobrito, double speedModifier) {
         super(bobrito, speedModifier, MOVEMENT_INTERVAL);
@@ -32,10 +34,22 @@ public class BobrittoSettlementWanderGoal extends RandomStrollGoal {
             return false;
         }
         
-        // Проверяем, не слишком ли далеко мы от центра поселения
+        // Особая обработка для бобритто, вышедших за пределы поселения
         if (isTooFarFromSettlement()) {
-            // Если слишком далеко, немедленно активируем цель, чтобы вернуться
+            // Принудительно активируем цель для возвращения в поселение
             this.forceTrigger = true;
+            this.isReturningToSettlement = true;
+            
+            // Если мы делаем слишком много попыток, телепортируем бобритто обратно в поселение
+            if (failedReturnAttempts > 5) {
+                // Телепортация в центр поселения при слишком большом количестве неудачных попыток
+                teleportToSettlement();
+                return false; // После телепортации не нужно использовать эту цель
+            }
+        } else {
+            // Если мы в пределах поселения, сбрасываем флаги
+            this.isReturningToSettlement = false;
+            this.failedReturnAttempts = 0;
         }
         
         // Если нет центра поселения, используем обычную логику блуждания,
@@ -56,6 +70,14 @@ public class BobrittoSettlementWanderGoal extends RandomStrollGoal {
 
             Vec3 vec3 = this.getPosition();
             if (vec3 == null) {
+                // Не удалось найти позицию
+                if (isReturningToSettlement) {
+                    failedReturnAttempts++;
+                    // Если много неудач подряд, телепортируем
+                    if (failedReturnAttempts > 3) {
+                        teleportToSettlement();
+                    }
+                }
                 return false;
             } else {
                 this.wantedX = vec3.x;
@@ -81,6 +103,61 @@ public class BobrittoSettlementWanderGoal extends RandomStrollGoal {
         return distanceSq > MAX_DISTANCE_FROM_CENTER * MAX_DISTANCE_FROM_CENTER;
     }
 
+    /**
+     * Телепортирует бобритто обратно в поселение в случае, если обычными путями он не может вернуться
+     */
+    private void teleportToSettlement() {
+        BlockPos center = bobrito.getSettlementCenter();
+        if (center != null) {
+            // Находим безопасную позицию для телепортации
+            BlockPos safePos = findSafePosition(center);
+            
+            // Телепортируем бобритто
+            bobrito.teleportTo(safePos.getX() + 0.5, safePos.getY(), safePos.getZ() + 0.5);
+            
+            // Сбрасываем счетчики и флаги
+            this.isReturningToSettlement = false;
+            this.failedReturnAttempts = 0;
+            
+            System.out.println("Bóbrito teleported back to settlement at " + 
+                safePos.getX() + ", " + safePos.getY() + ", " + safePos.getZ());
+        }
+    }
+    
+    /**
+     * Находит безопасную позицию рядом с центром поселения
+     */
+    private BlockPos findSafePosition(BlockPos center) {
+        // Ищем позицию в радиусе 10 блоков от центра
+        int radius = 10;
+        BlockPos safePos = center;
+        
+        // Пробуем найти безопасное место
+        for (int attempt = 0; attempt < 10; attempt++) {
+            // Генерируем случайное смещение в пределах радиуса
+            int offsetX = bobrito.getRandom().nextInt(radius * 2) - radius;
+            int offsetZ = bobrito.getRandom().nextInt(radius * 2) - radius;
+            
+            BlockPos testPos = center.offset(offsetX, 0, offsetZ);
+            
+            // Находим верхний твердый блок
+            BlockPos groundPos = bobrito.level().getHeightmapPos(
+                net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, 
+                testPos
+            );
+            
+            // Проверяем, что это безопасная позиция (нет лавы и т.д.)
+            if (bobrito.level().getBlockState(groundPos.below()).isSolid() && 
+                bobrito.level().getBlockState(groundPos).isAir() && 
+                bobrito.level().getBlockState(groundPos.above()).isAir()) {
+                safePos = groundPos;
+                break;
+            }
+        }
+        
+        return safePos;
+    }
+
     @Nullable
     @Override
     protected Vec3 getPosition() {
@@ -90,20 +167,49 @@ public class BobrittoSettlementWanderGoal extends RandomStrollGoal {
         }
         
         // Если мы слишком далеко от поселения, возвращаемся к центру
-        if (isTooFarFromSettlement()) {
+        if (isReturningToSettlement || isTooFarFromSettlement()) {
             BlockPos center = bobrito.getSettlementCenter();
-            Vec3 centerVec = new Vec3(center.getX(), center.getY(), center.getZ());
+            Vec3 centerVec = Vec3.atBottomCenterOf(center);
             
             // Направление к центру поселения
             Vec3 direction = centerVec.subtract(bobrito.position()).normalize();
             
-            // Генерируем точку примерно в направлении центра поселения
-            return LandRandomPos.getPosTowards(
+            // Увеличиваем радиус поиска для возвращения в поселение
+            int searchRadius = MAX_DISTANCE_FROM_CENTER / 2;
+            
+            // Генерируем точку в направлении центра поселения
+            Vec3 pos = LandRandomPos.getPosTowards(
                 this.mob,
-                SETTLEMENT_RADIUS,
-                SETTLEMENT_RADIUS / 2,
+                searchRadius,
+                7, // Увеличиваем высоту поиска
                 direction
             );
+            
+            // Если не удалось найти путь, используем прямое направление к центру
+            if (pos == null) {
+                // С каждой неудачной попыткой увеличиваем шанс телепортации
+                failedReturnAttempts++;
+                
+                if (failedReturnAttempts > 3 && bobrito.getRandom().nextInt(3) == 0) {
+                    // Телепортируем обратно
+                    teleportToSettlement();
+                    return null;
+                }
+                
+                // Пробуем найти любую возможную позицию в направлении центра
+                pos = DefaultRandomPos.getPosTowards(
+                    this.mob,
+                    searchRadius,
+                    0, // Не ограничиваем вертикальный поиск
+                    direction,
+                    0.7 // Высокая точность следования направлению
+                );
+            } else {
+                // Сбрасываем счетчик неудачных попыток, если нашли путь
+                failedReturnAttempts = 0;
+            }
+            
+            return pos;
         }
         
         // Иначе генерируем случайную позицию в пределах поселения
@@ -169,14 +275,40 @@ public class BobrittoSettlementWanderGoal extends RandomStrollGoal {
             
             // Проверяем, не слишком ли мы далеко от центра
             if (isTooFarFromSettlement()) {
-                // Сбрасываем текущий путь и заставляем сущность найти новый путь к центру
-                this.stop();
-                this.forceTrigger = true;
-                
-                // Записываем факт, что сущность вышла за пределы деревни
-                if (bobrito.getRandom().nextInt(10) == 0) { // лог только в 10% случаев, чтобы не спамить
-                    System.out.println("Bobrito left settlement area, forcing return to center");
+                // Если это новое обнаружение, начинаем процесс возвращения
+                if (!isReturningToSettlement) {
+                    // Сбрасываем текущий путь и заставляем сущность найти новый путь к центру
+                    this.stop();
+                    this.forceTrigger = true;
+                    this.isReturningToSettlement = true;
+                    
+                    // Увеличиваем скорость передвижения при возвращении
+                    bobrito.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED)
+                        .setBaseValue(0.35D); // Увеличиваем скорость на 40%
+                    
+                    // Логируем только первое обнаружение для этого бобритто
+                    System.out.println("Bobrito left settlement area, returning to center: " + 
+                        bobrito.getUUID().toString().substring(0, 8));
+                } else {
+                    // Если долго не можем вернуться, увеличиваем счетчик неудач
+                    failedReturnAttempts++;
+                    
+                    // Если много неудачных попыток, телепортируем
+                    if (failedReturnAttempts > 15) { // Примерно 15 секунд (15 тиков)
+                        teleportToSettlement();
+                    }
                 }
+            } else if (isReturningToSettlement) {
+                // Если мы успешно вернулись в поселение
+                isReturningToSettlement = false;
+                failedReturnAttempts = 0;
+                
+                // Возвращаем нормальную скорость
+                bobrito.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED)
+                    .setBaseValue(0.25D);
+                
+                System.out.println("Bobrito returned to settlement: " + 
+                    bobrito.getUUID().toString().substring(0, 8));
             }
             
             this.lastPosition = currentPos;
@@ -190,12 +322,28 @@ public class BobrittoSettlementWanderGoal extends RandomStrollGoal {
             return false;
         }
         
-        // Дополнительная проверка, чтобы не выходить за границы поселения
-        if (bobrito.getSettlementCenter() != null && isTooFarFromSettlement()) {
-            // Если вышли слишком далеко, прекращаем текущее блуждание и начинаем новое (к центру)
+        // Если бобритто слишком далеко и требуется телепортация, прекращаем текущее перемещение
+        if (isReturningToSettlement && failedReturnAttempts > 10) {
             return false;
         }
         
+        // Обычная проверка родительского класса
         return super.canContinueToUse();
+    }
+    
+    @Override
+    public void stop() {
+        super.stop();
+        
+        // Если мы прекращаем движение, но все еще возвращаемся, 
+        // проверяем, не нужно ли нам телепортироваться
+        if (isReturningToSettlement && isTooFarFromSettlement()) {
+            failedReturnAttempts++;
+            
+            // Если много попыток безуспешны, телепортируем
+            if (failedReturnAttempts > 5) {
+                teleportToSettlement();
+            }
+        }
     }
 }
