@@ -61,7 +61,27 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
         this.goalSelector.addGoal(4, new RandomLookAroundGoal(this));
         this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 32.0F));
 
-        this.targetSelector.addGoal(1, new HurtByTargetGoal(this).setAlertOthers());
+        // Модифицируем цель HurtByTarget, чтобы исключить бобритто-бандито из возможных целей
+        this.targetSelector.addGoal(1, new HurtByTargetGoal(this) {
+            @Override
+            public boolean canContinueToUse() {
+                // Проверяем, что цель не бобритто-бандито
+                if (this.mob.getTarget() instanceof BobrittoBanditoEntity) {
+                    return false;
+                }
+                return super.canContinueToUse();
+            }
+            
+            @Override
+            protected void alertOther(Mob mob, LivingEntity target) {
+                // Не оповещаем о целях, если цель - бобритто-бандито
+                if (target instanceof BobrittoBanditoEntity) {
+                    return;
+                }
+                super.alertOther(mob, target);
+            }
+        }.setAlertOthers());
+        
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
         this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, net.minecraft.world.entity.monster.Skeleton.class, true));
         this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, net.minecraft.world.entity.monster.Pillager.class, true));
@@ -179,6 +199,9 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
             arrow.setPierceLevel((byte)0); // Нет пробивания
             arrow.setSoundEvent(SoundEvents.ARROW_HIT); // Звук при попадании
             arrow.setNoPhysics(false); // Включаем физику
+            
+            // Помечаем стрелу как выпущенную бобритто-бандито, чтобы другие бобритто-бандито не получали урон
+            arrow.setOwner(this);
             
             double d0 = target.getX() - this.getX();
             double d1 = target.getY(0.3333333333333333D) - arrow.getY();

@@ -54,8 +54,14 @@ public class ForceSpawnEvents {
                     var player = serverLevel.players().get(random.nextInt(serverLevel.players().size()));
                     
                     for (int attempts = 0; attempts < 10; attempts++) {
-                        int offsetX = random.nextInt(64) - 32;
-                        int offsetZ = random.nextInt(64) - 32;
+                        // Генерируем случайный угол в радианах (0-2π)
+                        double angle = random.nextDouble() * Math.PI * 2;
+                        // Генерируем случайное расстояние между 32 и 64 блоками
+                        double distance = 32 + random.nextDouble() * 32;
+                        
+                        // Переводим в координаты X и Z
+                        int offsetX = (int)(Math.cos(angle) * distance);
+                        int offsetZ = (int)(Math.sin(angle) * distance);
                         
                         BlockPos spawnPos = player.blockPosition().offset(offsetX, 0, offsetZ);
                         
