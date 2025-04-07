@@ -114,13 +114,18 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
                 if (this.mob.getTarget() instanceof BobrittoBanditoEntity) {
                     return false;
                 }
+                // Проверяем, что цель не животное
+                if (this.mob.getTarget() instanceof net.minecraft.world.entity.animal.Animal) {
+                    return false;
+                }
                 return super.canContinueToUse();
             }
             
             @Override
             protected void alertOther(Mob mob, LivingEntity target) {
-                // Не оповещаем о целях, если цель - бобритто-бандито
-                if (target instanceof BobrittoBanditoEntity) {
+                // Не оповещаем о целях, если цель - бобритто-бандито или животное
+                if (target instanceof BobrittoBanditoEntity || 
+                    target instanceof net.minecraft.world.entity.animal.Animal) {
                     return;
                 }
                 super.alertOther(mob, target);
@@ -141,9 +146,14 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
         // Атака железных големов
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, IronGolem.class, true));
         
-        // Атака других мобов
+        // Атака других мобов, исключая животных
         this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, Mob.class, 10, true, false, (mob) -> {
-            // Атакуем любые существа, которые не являются монстрами и не являются бобритто
+            // Исключаем животных из целей
+            if (mob instanceof net.minecraft.world.entity.animal.Animal) {
+                return false;
+            }
+            
+            // Атакуем разумные существа, которые не являются монстрами и не являются бобритто
             return mob instanceof AgeableMob && 
                    !(mob instanceof BobrittoBanditoEntity) && 
                    mob.getMobType() != MobType.UNDEAD &&
