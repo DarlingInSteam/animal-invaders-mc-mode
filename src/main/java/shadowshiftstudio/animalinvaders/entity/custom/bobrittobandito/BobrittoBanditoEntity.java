@@ -495,4 +495,18 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
         // Регистрируемся с поселением при загрузке
         registerWithSettlementTimer = 20;
     }
+
+    @Override
+    public boolean isPersistenceRequired() {
+        // Предотвращаем исчезновение бобритто из поселения
+        // Если бобритто привязан к поселению, он не должен исчезать
+        return this.settlementCenter != null;
+    }
+    
+    // Метод для явной установки центра поселения
+    public void setSettlementCenter(BlockPos center) {
+        this.settlementCenter = center;
+        // Убеждаемся, что бобритто не исчезнет
+        this.setPersistenceRequired();
+    }
 }

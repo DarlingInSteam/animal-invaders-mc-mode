@@ -69,6 +69,45 @@ public class BobrittoManager {
     }
     
     /**
+     * Updates patrol groups for all settlements in a world
+     */
+    public static void updateSettlementPatrols(Level level) {
+        Map<BlockPos, SettlementData> worldSettlements = settlements.get(level);
+        if (worldSettlements != null) {
+            // Обновляем все существующие поселения
+            for (SettlementData data : worldSettlements.values()) {
+                data.updatePatrolGroups();
+            }
+        } else {
+            // Если карта поселений ещё не инициализирована, создаем её
+            settlements.put(level, new HashMap<>());
+            
+            // Находим все ратуши в мире
+            List<BlockPos> townHalls = SettlementManager.getSettlementBlocksOfType(level, 
+                    shadowshiftstudio.animalinvaders.block.custom.BobrittoTownHallBlock.class);
+            
+            // Для каждой ратуши создаем поселение и обновляем патрульные группы
+            for (BlockPos townHall : townHalls) {
+                SettlementData data = getOrCreateSettlement(level, townHall);
+                
+                // Находим всех Бобритто вокруг ратуши в радиусе 50 блоков
+                level.getEntitiesOfClass(BobrittoBanditoEntity.class, 
+                        new net.minecraft.world.phys.AABB(
+                                townHall.getX() - 50, townHall.getY() - 20, townHall.getZ() - 50,
+                                townHall.getX() + 50, townHall.getY() + 20, townHall.getZ() + 50))
+                        .forEach(bobrito -> {
+                            // Устанавливаем центр поселения для Бобритто и регистрируем в поселении
+                            bobrito.setSettlementCenter(townHall);
+                            data.registerBobrito(bobrito);
+                        });
+                
+                // Обновляем патрульные группы
+                data.updatePatrolGroups();
+            }
+        }
+    }
+    
+    /**
      * Gets the current capacity of a settlement based on number of houses
      */
     public static int getSettlementCapacity(Level level, BlockPos townHallPos) {

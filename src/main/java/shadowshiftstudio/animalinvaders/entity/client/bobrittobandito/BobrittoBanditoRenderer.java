@@ -27,5 +27,10 @@ public class BobrittoBanditoRenderer extends MobRenderer<BobrittoBanditoEntity, 
         }
 
         super.render(p_115455_, p_115456_, p_115457_, p_115458_, p_115459_, p_115460_);
+        
+        // Добавляем надпись "Лидер" над головой лидера патрульной группы
+        if (p_115455_.isPatrolLeader()) {
+            renderNameTag(p_115455_, net.minecraft.network.chat.Component.literal("§cЛидер"), p_115458_, p_115459_, p_115460_);
+        }
     }
 }

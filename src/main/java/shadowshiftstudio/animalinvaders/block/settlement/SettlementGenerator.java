@@ -127,31 +127,35 @@ public class SettlementGenerator {
         List<BlockPos> buildingPositions = new ArrayList<>();
         buildingPositions.add(townHallPos);
         
-        // Find position for house
-        BlockPos housePos = findSuitablePositionWithSpacing(level, townHallPos, 7, 7, 7, SETTLEMENT_SPACING, buildingPositions, isSuperflat);
-        if (housePos != null) {
-            LOGGER.info("Building house at X:{}, Y:{}, Z:{}", housePos.getX(), housePos.getY(), housePos.getZ());
-            
-            boolean houseSuccess = placeVanillaStructure(level, housePos, HOUSE_STRUCTURE);
-            if (houseSuccess) {
-                // Find the center of the structure and place our house block
-                BlockPos centerPos = findStructureCenter(level, housePos, 5, 5);
-                level.setBlock(centerPos, ModBlocks.BOBRITO_HOUSE.get().defaultBlockState(), 3);
+        // Build three houses instead of one to spawn 15 Bobritos (5 per house)
+        LOGGER.info("Generating three houses to accommodate 15 Bobritos...");
+        for (int i = 0; i < 3; i++) {
+            // Find position for house
+            BlockPos housePos = findSuitablePositionWithSpacing(level, townHallPos, 7, 7, 7, SETTLEMENT_SPACING, buildingPositions, isSuperflat);
+            if (housePos != null) {
+                LOGGER.info("Building house #{} at X:{}, Y:{}, Z:{}", i+1, housePos.getX(), housePos.getY(), housePos.getZ());
                 
-                LOGGER.info("Built house structure with marker block at X:{}, Y:{}, Z:{}", 
-                           centerPos.getX(), centerPos.getY(), centerPos.getZ());
-            } else if (isSuperflat) {
-                // Fallback for superflat
-                level.setBlock(housePos, ModBlocks.BOBRITO_HOUSE.get().defaultBlockState(), 3);
-                LOGGER.info("Placed only house block (without structure) at X:{}, Y:{}, Z:{}", 
-                           housePos.getX(), housePos.getY(), housePos.getZ());
+                boolean houseSuccess = placeVanillaStructure(level, housePos, HOUSE_STRUCTURE);
+                if (houseSuccess) {
+                    // Find the center of the structure and place our house block
+                    BlockPos centerPos = findStructureCenter(level, housePos, 5, 5);
+                    level.setBlock(centerPos, ModBlocks.BOBRITO_HOUSE.get().defaultBlockState(), 3);
+                    
+                    LOGGER.info("Built house structure #{} with marker block at X:{}, Y:{}, Z:{}", 
+                               i+1, centerPos.getX(), centerPos.getY(), centerPos.getZ());
+                } else if (isSuperflat) {
+                    // Fallback for superflat
+                    level.setBlock(housePos, ModBlocks.BOBRITO_HOUSE.get().defaultBlockState(), 3);
+                    LOGGER.info("Placed only house block #{} (without structure) at X:{}, Y:{}, Z:{}", 
+                               i+1, housePos.getX(), housePos.getY(), housePos.getZ());
+                } else {
+                    LOGGER.error("Failed to place house structure #{}", i+1);
+                }
+                
+                buildingPositions.add(housePos);
             } else {
-                LOGGER.error("Failed to place house structure");
+                LOGGER.error("Could not find suitable position for house #{}", i+1);
             }
-            
-            buildingPositions.add(housePos);
-        } else {
-            LOGGER.error("Could not find suitable position for house");
         }
         
         // Find position for barracks
@@ -185,11 +189,177 @@ public class SettlementGenerator {
             : townHallPos;
             
         String successMsg = "A new Bobrito settlement has spawned at X:" + centerPos.getX() + 
-                            ", Y:" + centerPos.getY() + ", Z:" + centerPos.getZ();
+                            ", Y:" + centerPos.getY() + ", Z:" + centerPos.getZ() +
+                            " with 3 houses (15 Bobritos) and a patrol group!";
         LOGGER.info(successMsg);
         level.getServer().getPlayerList().broadcastSystemMessage(
             net.minecraft.network.chat.Component.literal(successMsg),
             false);
+            
+        // Создаем начальных бобритто для каждого дома
+        spawnInitialBobritos(level);
+    }
+    
+    /**
+     * Spawn initial Bobrito for each house in the settlement
+     */
+    private static void spawnInitialBobritos(ServerLevel level) {
+        // Получаем все дома бобритто в поселении
+        List<BlockPos> houses = SettlementManager.getSettlementBlocksOfType(level, 
+                shadowshiftstudio.animalinvaders.block.custom.BobrittoHouseBlock.class);
+        
+        if (houses.isEmpty()) {
+            LOGGER.warn("No Bobrito houses found, cannot spawn initial Bobritos");
+            return;
+        }
+        
+        // Получаем ратушу, чтобы использовать её как центр поселения
+        List<BlockPos> townHalls = SettlementManager.getSettlementBlocksOfType(level, 
+                shadowshiftstudio.animalinvaders.block.custom.BobrittoTownHallBlock.class);
+        
+        if (townHalls.isEmpty()) {
+            LOGGER.warn("No town hall found, cannot spawn initial Bobritos");
+            return;
+        }
+        
+        BlockPos townHall = townHalls.get(0);
+        LOGGER.info("Creating initial Bobritos for settlement centered at X:{}, Y:{}, Z:{}", 
+                townHall.getX(), townHall.getY(), townHall.getZ());
+        
+        // Для каждого дома создаем 5 бобритто
+        for (BlockPos house : houses) {
+            LOGGER.info("Spawning 5 Bobritos for house at X:{}, Y:{}, Z:{}", 
+                    house.getX(), house.getY(), house.getZ());
+            
+            // Создаем 5 бобритто вокруг каждого дома
+            for (int i = 0; i < 5; i++) {
+                try {
+                    // Сначала найдем позицию на уровне земли у дома
+                    BlockPos houseLevelPos = new BlockPos(house.getX(), 
+                                                        findGroundLevelAround(level, house), 
+                                                        house.getZ());
+                    
+                    // Генерируем позицию вокруг дома на уровне земли
+                    BlockPos spawnPos = houseLevelPos.offset(
+                            (int)(Math.random() * 7) - 3,
+                            0,
+                            (int)(Math.random() * 7) - 3);
+                    
+                    // Находим точную позицию на поверхности земли для этих координат
+                    BlockPos groundPos = findGroundSurfacePosition(level, spawnPos);
+                    if (groundPos == null) {
+                        LOGGER.warn("Could not find ground surface at X:{}, Y:{}, Z:{}", 
+                                spawnPos.getX(), spawnPos.getY(), spawnPos.getZ());
+                        continue;
+                    }
+                    
+                    // Создаем сущность бобритто
+                    shadowshiftstudio.animalinvaders.entity.custom.bobrittobandito.BobrittoBanditoEntity bobrito = 
+                            shadowshiftstudio.animalinvaders.entity.ModEntities.BOBRITO_BANDITO.get().create(level);
+                    
+                    if (bobrito != null) {
+                        // Устанавливаем позицию и угол поворота
+                        bobrito.moveTo(
+                                groundPos.getX() + 0.5,
+                                groundPos.getY() + 0.1, // Немного выше земли
+                                groundPos.getZ() + 0.5,
+                                (float)(Math.random() * 360.0F),
+                                0.0F);
+                        
+                        // Устанавливаем центр поселения для бобритто
+                        bobrito.setSettlementCenter(townHall);
+                        
+                        // Завершаем инициализацию сущности
+                        bobrito.finalizeSpawn(
+                                level,
+                                level.getCurrentDifficultyAt(groundPos),
+                                net.minecraft.world.entity.MobSpawnType.STRUCTURE,
+                                null,
+                                null);
+                        
+                        // Добавляем сущность в мир
+                        level.addFreshEntityWithPassengers(bobrito);
+                        LOGGER.info("Spawned Bobrito at X:{}, Y:{}, Z:{}", 
+                                groundPos.getX(), groundPos.getY(), groundPos.getZ());
+                    } else {
+                        LOGGER.error("Failed to create Bobrito entity");
+                    }
+                } catch (Exception e) {
+                    LOGGER.error("Error spawning Bobrito: {}", e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        }
+        
+        // Обновляем патрульные группы
+        LOGGER.info("Triggering patrol group formation...");
+        BobrittoManager.updateSettlementPatrols(level);
+    }
+    
+    /**
+     * Находит позицию на поверхности земли для указанных координат
+     */
+    private static BlockPos findGroundSurfacePosition(ServerLevel level, BlockPos pos) {
+        // Сначала проверяем, находимся ли мы на земле
+        if (isSolid(level.getBlockState(pos.below())) && 
+            (level.getBlockState(pos).isAir() || isReplaceable(level.getBlockState(pos)))) {
+            return pos;
+        }
+        
+        // Если мы на крыше или в воздухе, ищем землю ниже
+        for (int y = pos.getY(); y > level.getMinBuildHeight() + 1; y--) {
+            BlockPos checkPos = new BlockPos(pos.getX(), y, pos.getZ());
+            if (isSolid(level.getBlockState(checkPos.below())) && 
+                (level.getBlockState(checkPos).isAir() || isReplaceable(level.getBlockState(checkPos)))) {
+                return checkPos;
+            }
+        }
+        
+        // Если не нашли землю ниже, пробуем найти выше (на случай если были под землей)
+        for (int y = pos.getY() + 1; y < level.getMaxBuildHeight() - 1; y++) {
+            BlockPos checkPos = new BlockPos(pos.getX(), y, pos.getZ());
+            if (isSolid(level.getBlockState(checkPos.below())) && 
+                (level.getBlockState(checkPos).isAir() || isReplaceable(level.getBlockState(checkPos)))) {
+                return checkPos;
+            }
+        }
+        
+        return null; // Не удалось найти подходящую позицию
+    }
+    
+    /**
+     * Находит уровень земли вокруг здания
+     */
+    private static int findGroundLevelAround(ServerLevel level, BlockPos buildingPos) {
+        // Ищем уровень земли в нескольких точках вокруг здания
+        int totalY = 0;
+        int validPoints = 0;
+        
+        int[][] offsets = {
+            {5, 0}, {-5, 0}, {0, 5}, {0, -5},
+            {5, 5}, {-5, 5}, {5, -5}, {-5, -5}
+        };
+        
+        for (int[] offset : offsets) {
+            BlockPos checkPos = buildingPos.offset(offset[0], 0, offset[1]);
+            
+            // Ищем уровень земли
+            BlockPos groundPos = level.getHeightmapPos(
+                    net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, checkPos);
+            
+            // Проверяем, действительно ли это земля
+            if (groundPos != null && isSolid(level.getBlockState(groundPos.below()))) {
+                totalY += groundPos.getY();
+                validPoints++;
+            }
+        }
+        
+        if (validPoints > 0) {
+            return totalY / validPoints;
+        } else {
+            // Если не нашли ни одной точки, используем уровень ниже здания
+            return Math.max(level.getMinBuildHeight() + 1, buildingPos.getY() - 2);
+        }
     }
     
     /**
