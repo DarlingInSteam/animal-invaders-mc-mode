@@ -16,6 +16,7 @@ import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.slf4j.Logger;
+import shadowshiftstudio.animalinvaders.block.ModBlocks;
 import shadowshiftstudio.animalinvaders.entity.ModEntities;
 import shadowshiftstudio.animalinvaders.entity.client.bullet.BulletRenderer;
 import shadowshiftstudio.animalinvaders.entity.client.potapimmo.PotapimmoRenderer;
@@ -39,6 +40,7 @@ public class AnimalInvaders
         MinecraftForge.EVENT_BUS.register(this);
         modEventBus.addListener(this::addCreative);
         ModItems.register(modEventBus);
+        ModBlocks.register(modEventBus); // Register blocks
         ModCreativeModeTabs.register(modEventBus);
         ModEntities.register(modEventBus);
         ModBiomeModifiers.register(modEventBus);

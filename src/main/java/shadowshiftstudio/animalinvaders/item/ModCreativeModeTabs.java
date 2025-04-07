@@ -8,6 +8,7 @@ import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.RegistryObject;
 import shadowshiftstudio.animalinvaders.AnimalInvaders;
+import shadowshiftstudio.animalinvaders.block.ModBlocks;
 
 public class ModCreativeModeTabs {
     public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = 
@@ -25,6 +26,12 @@ public class ModCreativeModeTabs {
                         pOutput.accept(ModItems.FESTERING_DESIRE.get());
                         // Добавляем наш меч Excalibur в эту вкладку
                         pOutput.accept(ModItems.EXCALIBUR.get());
+                        
+                        // Добавляем блоки поселений бобритто
+                        pOutput.accept(ModBlocks.BOBRITO_TOWN_HALL.get());
+                        pOutput.accept(ModBlocks.BOBRITO_HOUSE.get());
+                        pOutput.accept(ModBlocks.BOBRITO_BARRACKS.get());
+                        
                         // Сюда можно добавить другие предметы в будущем
                     })
                     .build()
