@@ -1,10 +1,13 @@
 package shadowshiftstudio.animalinvaders.entity.custom.bobrittobandito;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -20,8 +23,17 @@ import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.Vec3;
+import shadowshiftstudio.animalinvaders.block.settlement.BobrittoManager;
+import shadowshiftstudio.animalinvaders.block.settlement.SettlementManager;
+import shadowshiftstudio.animalinvaders.entity.ai.bobrittobandito.BobrittoFollowLeaderGoal;
+import shadowshiftstudio.animalinvaders.entity.ai.bobrittobandito.BobrittoPatrolGoal;
+import shadowshiftstudio.animalinvaders.entity.ai.bobrittobandito.BobrittoSettlementWanderGoal;
 import shadowshiftstudio.animalinvaders.entity.ai.bobrittobandito.BobrittoBanditoAttack;
 import shadowshiftstudio.animalinvaders.entity.utils.EntityUtils;
+
+import java.util.UUID;
 
 public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
     // Синхронизированные данные
@@ -29,6 +41,12 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
             SynchedEntityData.defineId(BobrittoBanditoEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_IS_RUNNING =
             SynchedEntityData.defineId(BobrittoBanditoEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> DATA_IS_PATROL_LEADER =
+            SynchedEntityData.defineId(BobrittoBanditoEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> DATA_IS_PATROL_FOLLOWER =
+            SynchedEntityData.defineId(BobrittoBanditoEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Integer> DATA_PATROL_STATE =
+            SynchedEntityData.defineId(BobrittoBanditoEntity.class, EntityDataSerializers.INT);
 
     // Состояния анимаций
     public final AnimationState runAnimationState = new AnimationState();
@@ -40,6 +58,14 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
     private int runTimeout = 0;
     private int idleTimeout = 0;
     private int shootCooldown = 0;
+    
+    // Данные для патрулирования
+    private UUID leaderUUID;
+    private Vec3[] patrolPoints;
+    private int currentPatrolPoint = 0;
+    private boolean completedOuterPatrol = false;
+    private int registerWithSettlementTimer = 20; // Регистрация с поселением через секунду после спавна
+    private BlockPos settlementCenter;
 
     public BobrittoBanditoEntity(EntityType<? extends Monster> entityType, Level level) {
         super(entityType, level);
@@ -50,16 +76,27 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
         super.defineSynchedData();
         this.entityData.define(DATA_IS_SHOOTING, false);
         this.entityData.define(DATA_IS_RUNNING, false);
+        this.entityData.define(DATA_IS_PATROL_LEADER, false);
+        this.entityData.define(DATA_IS_PATROL_FOLLOWER, false);
+        this.entityData.define(DATA_PATROL_STATE, BobrittoManager.PatrolState.PATROLLING_OUTER.ordinal());
     }
 
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(1, new BobrittoBanditoAttack(this, 1.5D, 10, 20.0F));
-        this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.2D, false));
-        this.goalSelector.addGoal(3, new WaterAvoidingRandomStrollGoal(this, 1.0D));
-        this.goalSelector.addGoal(4, new RandomLookAroundGoal(this));
-        this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 32.0F));
+        
+        // Патрульные цели - высокий приоритет, но ниже, чем атака
+        this.goalSelector.addGoal(1, new BobrittoPatrolGoal(this, 1.0D));
+        this.goalSelector.addGoal(1, new BobrittoFollowLeaderGoal(this, 1.0D, 2.0F, 10.0F));
+        
+        this.goalSelector.addGoal(2, new BobrittoBanditoAttack(this, 1.5D, 10, 20.0F));
+        this.goalSelector.addGoal(3, new MeleeAttackGoal(this, 1.2D, false));
+        
+        // Свободное блуждание по поселению для обычных бобритто
+        this.goalSelector.addGoal(4, new BobrittoSettlementWanderGoal(this, 1.0D));
+        this.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 1.0D));
+        this.goalSelector.addGoal(6, new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 32.0F));
 
         // Модифицируем цель HurtByTarget, чтобы исключить бобритто-бандито из возможных целей
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this) {
@@ -120,6 +157,26 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
         super.tick();
 
         if (!this.level().isClientSide()) {
+            // Регистрация с поселением после спавна
+            if (registerWithSettlementTimer > 0) {
+                registerWithSettlementTimer--;
+                if (registerWithSettlementTimer <= 0) {
+                    registerWithSettlement();
+                }
+            }
+            
+            // Обновление статуса патруля для лидера
+            if (isPatrolLeader()) {
+                if (patrolPoints == null) {
+                    generatePatrolPath();
+                }
+                
+                // Сброс флага завершения патруля, если начинаем патрулировать заново
+                if (getPatrolState() == BobrittoManager.PatrolState.PATROLLING_OUTER && completedOuterPatrol) {
+                    completedOuterPatrol = false;
+                }
+            }
+
             LivingEntity target = getTarget();
             if (target != null && target.isAlive()) {
                 double distSq = this.distanceToSqr(target);
@@ -259,5 +316,183 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
     @Override
     protected SoundEvent getDeathSound() {
         return SoundEvents.PILLAGER_DEATH;
+    }
+
+    /**
+     * Регистрирует бобритто с поселением
+     */
+    private void registerWithSettlement() {
+        if (!this.level().isClientSide) {
+            // Найти ближайшее поселение
+            BlockPos townHall = SettlementManager.findNearestTownHall(this.level(), this.blockPosition());
+            if (townHall != null) {
+                settlementCenter = townHall;
+                BobrittoManager.registerBobrito(this);
+            }
+        }
+    }
+
+    /**
+     * Генерирует точки патрулирования вокруг поселения
+     */
+    public void generatePatrolPath() {
+        if (settlementCenter == null) {
+            // Если центр поселения не найден, используем текущую позицию
+            settlementCenter = SettlementManager.findNearestTownHall(this.level(), this.blockPosition());
+            if (settlementCenter == null) {
+                settlementCenter = this.blockPosition();
+            }
+        }
+        
+        int radius = 30; // Радиус патрулирования вокруг поселения
+        int pointCount = 8; // Количество точек для патрулирования (восьмиугольник)
+        patrolPoints = new Vec3[pointCount];
+        
+        for (int i = 0; i < pointCount; i++) {
+            double angle = 2 * Math.PI * i / pointCount;
+            int x = settlementCenter.getX() + (int)(Math.cos(angle) * radius);
+            int z = settlementCenter.getZ() + (int)(Math.sin(angle) * radius);
+            int y = this.level().getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
+            patrolPoints[i] = new Vec3(x, y, z);
+        }
+        
+        currentPatrolPoint = 0;
+        completedOuterPatrol = false;
+    }
+
+    /**
+     * Возвращает следующую точку патрулирования
+     */
+    public Vec3 getNextPatrolPoint() {
+        if (patrolPoints == null || patrolPoints.length == 0) {
+            return null;
+        }
+        
+        // Если патрулируем внутри поселения
+        if (getPatrolState() == BobrittoManager.PatrolState.PATROLLING_INNER) {
+            // Генерируем случайную точку в пределах поселения
+            int radius = 15; // Меньший радиус для патрулирования внутри
+            double angle = this.random.nextDouble() * 2 * Math.PI;
+            int x = settlementCenter.getX() + (int)(Math.cos(angle) * this.random.nextInt(radius));
+            int z = settlementCenter.getZ() + (int)(Math.sin(angle) * this.random.nextInt(radius));
+            int y = this.level().getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
+            return new Vec3(x, y, z);
+        }
+        
+        // Для внешнего патрулирования используем заранее заданные точки
+        Vec3 target = patrolPoints[currentPatrolPoint];
+        currentPatrolPoint = (currentPatrolPoint + 1) % patrolPoints.length;
+        
+        // Если прошли полный круг, отмечаем это
+        if (currentPatrolPoint == 0) {
+            completedOuterPatrol = true;
+        }
+        
+        return target;
+    }
+    
+    // Геттеры и сеттеры для патрулирования
+    
+    public boolean isPatrolLeader() {
+        return this.entityData.get(DATA_IS_PATROL_LEADER);
+    }
+    
+    public void setPatrolLeader(boolean isLeader) {
+        this.entityData.set(DATA_IS_PATROL_LEADER, isLeader);
+    }
+    
+    public boolean isPatrolFollower() {
+        return this.entityData.get(DATA_IS_PATROL_FOLLOWER);
+    }
+    
+    public void setPatrolFollower(boolean isFollower) {
+        this.entityData.set(DATA_IS_PATROL_FOLLOWER, isFollower);
+    }
+    
+    public BobrittoManager.PatrolState getPatrolState() {
+        return BobrittoManager.PatrolState.values()[this.entityData.get(DATA_PATROL_STATE)];
+    }
+    
+    public void setPatrolState(BobrittoManager.PatrolState state) {
+        this.entityData.set(DATA_PATROL_STATE, state.ordinal());
+        
+        // Сбрасываем точки патрулирования при изменении состояния
+        if (isPatrolLeader()) {
+            if (state == BobrittoManager.PatrolState.PATROLLING_OUTER) {
+                generatePatrolPath();
+            }
+        }
+    }
+    
+    public UUID getLeaderUUID() {
+        return this.leaderUUID;
+    }
+    
+    public void setLeaderUUID(UUID leaderUUID) {
+        this.leaderUUID = leaderUUID;
+    }
+    
+    public boolean hasCompletedOuterPatrol() {
+        return completedOuterPatrol;
+    }
+    
+    public BobrittoBanditoEntity getLeader() {
+        if (this.leaderUUID == null) {
+            return null;
+        }
+        
+        for (Entity entity : this.level().getEntities(this, this.getBoundingBox().inflate(16.0D))) {
+            if (entity instanceof BobrittoBanditoEntity && entity.getUUID().equals(this.leaderUUID)) {
+                return (BobrittoBanditoEntity) entity;
+            }
+        }
+        
+        return null;
+    }
+    
+    public BlockPos getSettlementCenter() {
+        return settlementCenter;
+    }
+    
+    // NBT сохранение/загрузка
+    
+    @Override
+    public void addAdditionalSaveData(CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        tag.putBoolean("PatrolLeader", isPatrolLeader());
+        tag.putBoolean("PatrolFollower", isPatrolFollower());
+        tag.putInt("PatrolState", getPatrolState().ordinal());
+        
+        if (leaderUUID != null) {
+            tag.putUUID("LeaderUUID", leaderUUID);
+        }
+        
+        if (settlementCenter != null) {
+            tag.putInt("SettlementX", settlementCenter.getX());
+            tag.putInt("SettlementY", settlementCenter.getY());
+            tag.putInt("SettlementZ", settlementCenter.getZ());
+        }
+    }
+    
+    @Override
+    public void readAdditionalSaveData(CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        setPatrolLeader(tag.getBoolean("PatrolLeader"));
+        setPatrolFollower(tag.getBoolean("PatrolFollower"));
+        setPatrolState(BobrittoManager.PatrolState.values()[tag.getInt("PatrolState")]);
+        
+        if (tag.hasUUID("LeaderUUID")) {
+            leaderUUID = tag.getUUID("LeaderUUID");
+        }
+        
+        if (tag.contains("SettlementX")) {
+            int x = tag.getInt("SettlementX");
+            int y = tag.getInt("SettlementY");
+            int z = tag.getInt("SettlementZ");
+            settlementCenter = new BlockPos(x, y, z);
+        }
+        
+        // Регистрируемся с поселением при загрузке
+        registerWithSettlementTimer = 20;
     }
 }

@@ -34,6 +34,7 @@ public class SettlementGenerator {
     
     // Structure IDs for vanilla village buildings
     private static final ResourceLocation TOWN_HALL_STRUCTURE = new ResourceLocation("minecraft:village/plains/houses/plains_big_house_1");
+    private static final ResourceLocation TOWN_HALL_FALLBACK = new ResourceLocation("minecraft:village/plains/houses/plains_big_house_1");
     private static final ResourceLocation HOUSE_STRUCTURE = new ResourceLocation("minecraft:village/plains/houses/plains_small_house_1");
     private static final ResourceLocation BARRACKS_STRUCTURE = new ResourceLocation("minecraft:village/plains/houses/plains_armorer_house_1");
     
@@ -75,17 +76,27 @@ public class SettlementGenerator {
         BlockPos worldSpawn = level.getSharedSpawnPos();
         LOGGER.info("World spawn is at X:{}, Y:{}, Z:{}", worldSpawn.getX(), worldSpawn.getY(), worldSpawn.getZ());
         
+        // Detect if this is a superflat world
+        boolean isSuperflat = isSuperFlatWorld(level);
+        LOGGER.info("Is superflat world: {}", isSuperflat);
+        
         // Find a suitable position for the town hall
-        BlockPos townHallPos = findBestSuitablePosition(level, worldSpawn, 10, 10, 10);
+        BlockPos townHallPos = findBestSuitablePosition(level, worldSpawn, 10, 10, 10, isSuperflat);
         if (townHallPos == null) {
-            // If we couldn't find a suitable position, log an error
-            String errorMsg = "Failed to generate Bobrito settlement - no suitable location found within " + 
-                              SPAWN_SEARCH_RADIUS + " blocks of spawn!";
-            LOGGER.error(errorMsg);
-            level.getServer().getPlayerList().broadcastSystemMessage(
-                net.minecraft.network.chat.Component.literal(errorMsg),
-                false);
-            return;
+            // If we couldn't find a suitable position, try direct spawn point for superflat
+            if (isSuperflat) {
+                townHallPos = new BlockPos(worldSpawn.getX(), worldSpawn.getY(), worldSpawn.getZ());
+                LOGGER.info("Using direct spawn position for superflat world");
+            } else {
+                // For regular worlds, log error and exit
+                String errorMsg = "Failed to generate Bobrito settlement - no suitable location found within " + 
+                                  SPAWN_SEARCH_RADIUS + " blocks of spawn!";
+                LOGGER.error(errorMsg);
+                level.getServer().getPlayerList().broadcastSystemMessage(
+                    net.minecraft.network.chat.Component.literal(errorMsg),
+                    false);
+                return;
+            }
         }
         
         LOGGER.info("Found suitable location for Bobrito town hall at X:{}, Y:{}, Z:{}", 
@@ -101,8 +112,15 @@ public class SettlementGenerator {
             LOGGER.info("Built town hall structure with marker block at X:{}, Y:{}, Z:{}", 
                        centerPos.getX(), centerPos.getY(), centerPos.getZ());
         } else {
-            LOGGER.error("Failed to place town hall structure");
-            return;
+            // Fallback for superflat if structure placement fails
+            if (isSuperflat) {
+                level.setBlock(townHallPos, ModBlocks.BOBRITO_TOWN_HALL.get().defaultBlockState(), 3);
+                LOGGER.info("Placed only town hall block (without structure) at X:{}, Y:{}, Z:{}", 
+                           townHallPos.getX(), townHallPos.getY(), townHallPos.getZ());
+            } else {
+                LOGGER.error("Failed to place town hall structure");
+                return;
+            }
         }
         
         // Track positions to ensure minimum spacing
@@ -110,38 +128,50 @@ public class SettlementGenerator {
         buildingPositions.add(townHallPos);
         
         // Find position for house
-        BlockPos housePos = findSuitablePositionWithSpacing(level, townHallPos, 7, 7, 7, SETTLEMENT_SPACING, buildingPositions);
+        BlockPos housePos = findSuitablePositionWithSpacing(level, townHallPos, 7, 7, 7, SETTLEMENT_SPACING, buildingPositions, isSuperflat);
         if (housePos != null) {
             LOGGER.info("Building house at X:{}, Y:{}, Z:{}", housePos.getX(), housePos.getY(), housePos.getZ());
             
-            if (placeVanillaStructure(level, housePos, HOUSE_STRUCTURE)) {
+            boolean houseSuccess = placeVanillaStructure(level, housePos, HOUSE_STRUCTURE);
+            if (houseSuccess) {
                 // Find the center of the structure and place our house block
                 BlockPos centerPos = findStructureCenter(level, housePos, 5, 5);
                 level.setBlock(centerPos, ModBlocks.BOBRITO_HOUSE.get().defaultBlockState(), 3);
                 
                 LOGGER.info("Built house structure with marker block at X:{}, Y:{}, Z:{}", 
                            centerPos.getX(), centerPos.getY(), centerPos.getZ());
-                
-                buildingPositions.add(housePos);
+            } else if (isSuperflat) {
+                // Fallback for superflat
+                level.setBlock(housePos, ModBlocks.BOBRITO_HOUSE.get().defaultBlockState(), 3);
+                LOGGER.info("Placed only house block (without structure) at X:{}, Y:{}, Z:{}", 
+                           housePos.getX(), housePos.getY(), housePos.getZ());
             } else {
                 LOGGER.error("Failed to place house structure");
             }
+            
+            buildingPositions.add(housePos);
         } else {
             LOGGER.error("Could not find suitable position for house");
         }
         
         // Find position for barracks
-        BlockPos barracksPos = findSuitablePositionWithSpacing(level, townHallPos, 7, 7, 7, SETTLEMENT_SPACING, buildingPositions);
+        BlockPos barracksPos = findSuitablePositionWithSpacing(level, townHallPos, 7, 7, 7, SETTLEMENT_SPACING, buildingPositions, isSuperflat);
         if (barracksPos != null) {
             LOGGER.info("Building barracks at X:{}, Y:{}, Z:{}", barracksPos.getX(), barracksPos.getY(), barracksPos.getZ());
             
-            if (placeVanillaStructure(level, barracksPos, BARRACKS_STRUCTURE)) {
+            boolean barracksSuccess = placeVanillaStructure(level, barracksPos, BARRACKS_STRUCTURE);
+            if (barracksSuccess) {
                 // Find the center of the structure and place our barracks block
                 BlockPos centerPos = findStructureCenter(level, barracksPos, 5, 5);
                 level.setBlock(centerPos, ModBlocks.BOBRITO_BARRACKS.get().defaultBlockState(), 3);
                 
                 LOGGER.info("Built barracks structure with marker block at X:{}, Y:{}, Z:{}", 
                            centerPos.getX(), centerPos.getY(), centerPos.getZ());
+            } else if (isSuperflat) {
+                // Fallback for superflat
+                level.setBlock(barracksPos, ModBlocks.BOBRITO_BARRACKS.get().defaultBlockState(), 3);
+                LOGGER.info("Placed only barracks block (without structure) at X:{}, Y:{}, Z:{}",
+                           barracksPos.getX(), barracksPos.getY(), barracksPos.getZ());
             } else {
                 LOGGER.error("Failed to place barracks structure");
             }
@@ -150,13 +180,90 @@ public class SettlementGenerator {
         }
         
         // Log settlement creation and broadcast to players
-        BlockPos centerPos = findStructureCenter(level, townHallPos, 7, 7);
+        BlockPos centerPos = (townHallSuccess) 
+            ? findStructureCenter(level, townHallPos, 7, 7) 
+            : townHallPos;
+            
         String successMsg = "A new Bobrito settlement has spawned at X:" + centerPos.getX() + 
                             ", Y:" + centerPos.getY() + ", Z:" + centerPos.getZ();
         LOGGER.info(successMsg);
         level.getServer().getPlayerList().broadcastSystemMessage(
             net.minecraft.network.chat.Component.literal(successMsg),
             false);
+    }
+    
+    /**
+     * Detects if the world is a superflat world
+     */
+    private static boolean isSuperFlatWorld(ServerLevel level) {
+        // Get world spawn
+        BlockPos spawn = level.getSharedSpawnPos();
+        
+        // Log the Y coordinate for debugging
+        LOGGER.info("Checking superflat at spawn Y={}", spawn.getY());
+        
+        // Check 1: Very low Y spawn is often indicative of superflat worlds
+        if (spawn.getY() < -50) {
+            LOGGER.info("Detected likely superflat world due to low Y spawn at {}", spawn.getY());
+            return true;
+        }
+        
+        // Check 2: Direct check for bedrock layer pattern typical in superflat
+        boolean hasBedrockLayer = true;
+        for (int x = -2; x <= 2 && hasBedrockLayer; x += 2) {
+            for (int z = -2; z <= 2 && hasBedrockLayer; z += 2) {
+                BlockPos checkPos = new BlockPos(spawn.getX() + x, level.getMinBuildHeight(), spawn.getZ() + z);
+                if (!level.getBlockState(checkPos).is(Blocks.BEDROCK)) {
+                    hasBedrockLayer = false;
+                }
+            }
+        }
+        
+        if (hasBedrockLayer) {
+            LOGGER.info("Detected superflat world due to bedrock layer pattern");
+            return true;
+        }
+        
+        // Check 3: Original flat terrain check (slightly modified)
+        int flatCount = 0;
+        int checkRadius = 10;
+        int checkTotal = 0;
+        int prevHeight = -1;
+        
+        for (int x = -checkRadius; x <= checkRadius; x += 5) {
+            for (int z = -checkRadius; z <= checkRadius; z += 5) {
+                checkTotal++;
+                
+                // Find the highest non-air block
+                int height = -1;
+                for (int y = Math.min(level.getMaxBuildHeight() - 1, 120); y > level.getMinBuildHeight(); y--) {
+                    BlockPos checkPos = new BlockPos(spawn.getX() + x, y, spawn.getZ() + z);
+                    BlockState state = level.getBlockState(checkPos);
+                    if (!state.isAir()) {
+                        height = y;
+                        break;
+                    }
+                }
+                
+                if (height != -1) {
+                    if (prevHeight == -1) {
+                        prevHeight = height;
+                        flatCount++;
+                    } else if (Math.abs(height - prevHeight) <= 1) { // Allow small variations
+                        flatCount++;
+                    }
+                }
+            }
+        }
+        
+        boolean isFlatTerrain = checkTotal > 0 && (double)flatCount / checkTotal > 0.8;
+        
+        if (isFlatTerrain) {
+            LOGGER.info("Detected superflat world due to flat terrain - flatCount={}, checkTotal={}", flatCount, checkTotal);
+            return true;
+        }
+        
+        return false;
     }
     
     /**
@@ -169,6 +276,13 @@ public class SettlementGenerator {
             
             if (template == null) {
                 LOGGER.error("Failed to load structure template: {}", structureId);
+                
+                // If this is the town hall structure, try the fallback
+                if (structureId.equals(TOWN_HALL_STRUCTURE)) {
+                    LOGGER.info("Attempting to use fallback structure for town hall");
+                    return placeVanillaStructure(level, pos, TOWN_HALL_FALLBACK);
+                }
+                
                 return false;
             }
             
@@ -177,9 +291,17 @@ public class SettlementGenerator {
             
             // Place the structure
             template.placeInWorld(level, pos, pos, settings, RandomSource.create(), 2);
+            LOGGER.info("Successfully placed structure: {}", structureId);
             return true;
         } catch (Exception e) {
             LOGGER.error("Error placing structure {}: {}", structureId, e.getMessage());
+            
+            // If this is the town hall structure, try the fallback
+            if (structureId.equals(TOWN_HALL_STRUCTURE)) {
+                LOGGER.info("Attempting to use fallback structure for town hall after error");
+                return placeVanillaStructure(level, pos, TOWN_HALL_FALLBACK);
+            }
+            
             return false;
         }
     }
@@ -211,124 +333,249 @@ public class SettlementGenerator {
     /**
      * Find the best suitable position as close to spawn as possible
      */
-    private static BlockPos findBestSuitablePosition(ServerLevel level, BlockPos center, int sizeX, int sizeY, int sizeZ) {
+    private static BlockPos findBestSuitablePosition(ServerLevel level, BlockPos center, int sizeX, int sizeY, int sizeZ, boolean isSuperflat) {
         BlockPos bestPos = null;
         double closestDistSq = Double.MAX_VALUE;
         
         LOGGER.info("Searching for suitable position within {} blocks of spawn", SPAWN_SEARCH_RADIUS);
         
-        // Check in expanding circles from spawn
-        for (int radius = 20; radius <= SPAWN_SEARCH_RADIUS; radius += 20) {
-            LOGGER.debug("Searching at radius: {}", radius);
-            
-            for (int attempt = 0; attempt < 8; attempt++) {
-                // Try positions in a circle around center
-                double angle = 2 * Math.PI * attempt / 8.0;
-                int offX = (int) (Math.cos(angle) * radius);
-                int offZ = (int) (Math.sin(angle) * radius);
+        if (isSuperflat) {
+            // For superflat, just find a position near spawn
+            for (int attempt = 0; attempt < 20; attempt++) {
+                int offsetX = (attempt % 10) * 5; // 0, 5, 10, 15...
+                int offsetZ = (attempt / 10) * 5; // 0, 0, 0... then 5, 5, 5...
                 
-                BlockPos basePos = center.offset(offX, 0, offZ);
-                BlockPos pos = findSuitableFlatGround(level, basePos, sizeX, sizeY, sizeZ);
+                // Alternate between positive and negative offsets
+                if (attempt % 2 == 1) offsetX = -offsetX;
+                if ((attempt / 2) % 2 == 1) offsetZ = -offsetZ;
                 
-                if (pos != null) {
-                    double distSq = pos.distSqr(center);
-                    if (distSq < closestDistSq) {
-                        closestDistSq = distSq;
-                        bestPos = pos;
-                        LOGGER.debug("Found better position at X:{}, Y:{}, Z:{}, distance: {}", 
-                                    pos.getX(), pos.getY(), pos.getZ(), Math.sqrt(distSq));
+                BlockPos pos = new BlockPos(
+                    center.getX() + offsetX,
+                    center.getY(),
+                    center.getZ() + offsetZ
+                );
+                
+                // Find the ground level
+                int groundY = findGroundLevel(level, pos);
+                if (groundY != -1) {
+                    // If ground found, adjust Y position
+                    pos = new BlockPos(pos.getX(), center.getY() + groundY, pos.getZ());
+                    
+                    // Simple check for superflat - just make sure the block below is solid
+                    if (isSolid(level.getBlockState(pos.below()))) {
+                        LOGGER.info("Found suitable position for superflat at X:{}, Y:{}, Z:{}", 
+                                   pos.getX(), pos.getY(), pos.getZ());
+                        return pos;
                     }
                 }
             }
             
-            // If we found a suitable position and it's reasonably close, return it
-            if (bestPos != null && Math.sqrt(closestDistSq) < 200) {
-                LOGGER.info("Found good position at distance {} blocks", Math.sqrt(closestDistSq));
+            // If no suitable position found, just return the center with adjusted Y
+            int groundY = findGroundLevel(level, center);
+            if (groundY != -1) {
+                LOGGER.info("Using adjusted spawn position for superflat world");
+                return new BlockPos(center.getX(), center.getY() + groundY, center.getZ());
+            } else {
+                LOGGER.info("Using direct spawn position for superflat world");
+                return center;
+            }
+        }
+        
+        // For normal worlds, check in expanding circles
+        Random random = new Random();
+        for (int radius = 20; radius <= SPAWN_SEARCH_RADIUS; radius += 20) {
+            // Try multiple angles at each radius
+            for (int angle = 0; angle < 360; angle += 30) {
+                // Convert angle to radians and calculate position
+                double rad = Math.toRadians(angle);
+                int offsetX = (int) (Math.cos(rad) * radius);
+                int offsetZ = (int) (Math.sin(rad) * radius);
+                
+                BlockPos basePos = new BlockPos(
+                    center.getX() + offsetX,
+                    center.getY(),
+                    center.getZ() + offsetZ
+                );
+                
+                // Find ground level at this position
+                int groundY = findGroundLevel(level, basePos);
+                if (groundY == -1) continue; // No suitable ground
+                
+                // Adjust Y position based on ground level
+                basePos = new BlockPos(basePos.getX(), center.getY() + groundY, basePos.getZ());
+                
+                // Check if this position is suitable for the structure
+                if (isSuitableForStructure(level, basePos, sizeX, sizeY, sizeZ)) {
+                    // Check if this is the closest suitable position to center
+                    double distSq = basePos.distSqr(center);
+                    if (distSq < closestDistSq) {
+                        bestPos = basePos;
+                        closestDistSq = distSq;
+                        
+                        // If we're very close to spawn, just use this position
+                        if (distSq < 400) { // 20 blocks
+                            return bestPos;
+                        }
+                    }
+                }
+            }
+            
+            // If we found a suitable position at this radius, return it
+            if (bestPos != null) {
                 return bestPos;
             }
         }
         
-        // If we've completed the full search, return the best position found (if any)
-        if (bestPos != null) {
-            LOGGER.info("Completed full search, best position at distance {} blocks", Math.sqrt(closestDistSq));
-        }
-        return bestPos;
+        return bestPos; // May be null if no suitable position found
     }
     
     /**
-     * Find a suitable flat ground position with no obstacles
-     */
-    private static BlockPos findSuitableFlatGround(ServerLevel level, BlockPos center, int sizeX, int sizeY, int sizeZ) {
-        int groundY = findGroundLevel(level, center);
-        if (groundY == -1) return null;
-        
-        BlockPos basePos = center.above(groundY);
-        
-        // Check if area is flat and clear
-        if (!isAreaFlatAndClear(level, basePos, sizeX, sizeY, sizeZ)) {
-            return null;
-        }
-        
-        return basePos;
-    }
-    
-    /**
-     * Find a suitable position with minimum spacing from other buildings
+     * Find a suitable position within a certain radius of a center position, while maintaining minimum spacing from other buildings
      */
     private static BlockPos findSuitablePositionWithSpacing(ServerLevel level, BlockPos center, 
-                                                          int sizeX, int sizeY, int sizeZ, 
-                                                          int minSpacing, List<BlockPos> existingBuildings) {
-        Random rand = new Random();
+                                                         int sizeX, int sizeY, int sizeZ,
+                                                         int spacing, List<BlockPos> existingBuildings,
+                                                         boolean isSuperflat) {
+        LOGGER.info("Finding suitable position near X:{}, Y:{}, Z:{} with spacing {}", 
+                   center.getX(), center.getY(), center.getZ(), spacing);
         
-        for (int attempt = 0; attempt < MAX_SEARCH_ATTEMPTS; attempt++) {
-            // Try random positions in a circle around the center
-            double angle = rand.nextDouble() * 2 * Math.PI;
-            int distance = minSpacing + rand.nextInt(10); // Random distance between minSpacing and minSpacing+10
-            int offX = (int) (Math.cos(angle) * distance);
-            int offZ = (int) (Math.sin(angle) * distance);
+        Random random = new Random();
+        
+        if (isSuperflat) {
+            // For superflat worlds, just pick positions in a simple pattern
+            // Try different direction offsets from the town hall
+            int[][] directions = {
+                {1, 0}, {0, 1}, {-1, 0}, {0, -1},  // Cardinal
+                {1, 1}, {1, -1}, {-1, 1}, {-1, -1}  // Diagonal
+            };
             
-            BlockPos searchPos = center.offset(offX, 0, offZ);
-            BlockPos pos = findSuitableFlatGround(level, searchPos, sizeX, sizeY, sizeZ);
+            // Shuffle directions for variety
+            for (int i = directions.length - 1; i > 0; i--) {
+                int j = random.nextInt(i + 1);
+                int[] temp = directions[i];
+                directions[i] = directions[j];
+                directions[j] = temp;
+            }
             
-            if (pos != null) {
-                // Check if it's far enough from all existing buildings
+            // Try each direction with increasing distance
+            for (int dist = spacing; dist <= spacing * 3; dist += spacing) {
+                for (int[] dir : directions) {
+                    int offsetX = dir[0] * dist;
+                    int offsetZ = dir[1] * dist;
+                    
+                    BlockPos pos = new BlockPos(
+                        center.getX() + offsetX,
+                        center.getY(),
+                        center.getZ() + offsetZ
+                    );
+                    
+                    // Find ground level
+                    int groundY = findGroundLevel(level, pos);
+                    if (groundY != -1) {
+                        pos = new BlockPos(pos.getX(), center.getY() + groundY, pos.getZ());
+                    }
+                    
+                    // Check for spacing from existing buildings
+                    boolean tooClose = false;
+                    for (BlockPos building : existingBuildings) {
+                        if (pos.distSqr(building) < spacing * spacing) {
+                            tooClose = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!tooClose && isSolid(level.getBlockState(pos.below()))) {
+                        LOGGER.info("Found suitable position for superflat building at X:{}, Y:{}, Z:{}", 
+                                   pos.getX(), pos.getY(), pos.getZ());
+                        return pos;
+                    }
+                }
+            }
+            
+            // Fallback for superflat - if all else fails, just place it randomly nearby
+            for (int attempt = 0; attempt < 10; attempt++) {
+                int offsetX = (int) (random.nextInt(spacing * 3) - (spacing * 1.5));
+                int offsetZ = (int) (random.nextInt(spacing * 3) - (spacing * 1.5));
+                
+                BlockPos pos = new BlockPos(
+                    center.getX() + offsetX,
+                    center.getY(),
+                    center.getZ() + offsetZ
+                );
+                
+                // Simple check for minimum spacing
                 boolean tooClose = false;
-                for (BlockPos existing : existingBuildings) {
-                    if (pos.distSqr(existing) < minSpacing * minSpacing) {
+                for (BlockPos building : existingBuildings) {
+                    if (pos.distSqr(building) < spacing * spacing * 0.5) { // Allow closer placement as a fallback
                         tooClose = true;
                         break;
                     }
                 }
                 
                 if (!tooClose) {
+                    LOGGER.info("Using fallback position for superflat building at X:{}, Y:{}, Z:{}", 
+                               pos.getX(), pos.getY(), pos.getZ());
                     return pos;
+                }
+            }
+        } else {
+            // For normal worlds, use a more sophisticated approach
+            // Search in expanding circles
+            for (int radius = spacing; radius <= spacing * 4; radius += spacing / 2) {
+                for (int angleStep = 0; angleStep < 16; angleStep++) {
+                    double angle = (Math.PI * 2 * angleStep / 16) + (random.nextDouble() * 0.2);
+                    
+                    int offsetX = (int) (Math.cos(angle) * radius);
+                    int offsetZ = (int) (Math.sin(angle) * radius);
+                    
+                    BlockPos basePos = new BlockPos(
+                        center.getX() + offsetX,
+                        center.getY(),
+                        center.getZ() + offsetZ
+                    );
+                    
+                    // Find ground level
+                    int groundY = findGroundLevel(level, basePos);
+                    if (groundY == -1) continue;
+                    
+                    basePos = new BlockPos(basePos.getX(), center.getY() + groundY, basePos.getZ());
+                    
+                    // Check for spacing from existing buildings
+                    boolean tooClose = false;
+                    for (BlockPos building : existingBuildings) {
+                        if (basePos.distSqr(building) < spacing * spacing) {
+                            tooClose = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!tooClose && isSuitableForStructure(level, basePos, sizeX, sizeY, sizeZ)) {
+                        return basePos;
+                    }
                 }
             }
         }
         
-        return null; // No suitable position found
+        // If we reach here, we couldn't find a suitable position
+        LOGGER.warn("Could not find suitable position with spacing after {} attempts", MAX_SEARCH_ATTEMPTS);
+        return null;
     }
     
     /**
-     * Check if an area is flat and clear of obstacles
+     * Check if a position is suitable for a structure
      */
-    private static boolean isAreaFlatAndClear(ServerLevel level, BlockPos basePos, int sizeX, int sizeY, int sizeZ) {
-        // Check if the base is on solid ground
-        if (!isSolid(level.getBlockState(basePos.below()))) {
-            return false;
-        }
-        
-        // Check if there's enough flat, clear space
+    private static boolean isSuitableForStructure(ServerLevel level, BlockPos basePos, int sizeX, int sizeY, int sizeZ) {
+        // Check ground is solid and relatively flat
         for (int x = 0; x < sizeX; x++) {
             for (int z = 0; z < sizeZ; z++) {
                 BlockPos checkPos = basePos.offset(x, -1, z);
                 
-                // Check if ground is at same level (mostly flat)
+                // Check if ground is solid
                 if (!isSolid(level.getBlockState(checkPos))) {
                     return false;
                 }
                 
-                // Check for obstructions
+                // Check for obstructions in the building area
                 for (int y = 0; y < sizeY; y++) {
                     BlockPos airPos = basePos.offset(x, y, z);
                     if (!isReplaceable(level.getBlockState(airPos))) {
