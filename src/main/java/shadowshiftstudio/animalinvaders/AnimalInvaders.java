@@ -3,10 +3,6 @@ package shadowshiftstudio.animalinvaders;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.SpawnPlacements;
-import net.minecraft.world.entity.MobCategory;
-import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
@@ -24,10 +20,11 @@ import shadowshiftstudio.animalinvaders.entity.ModEntities;
 import shadowshiftstudio.animalinvaders.entity.client.bullet.BulletRenderer;
 import shadowshiftstudio.animalinvaders.entity.client.potapimmo.PotapimmoRenderer;
 import shadowshiftstudio.animalinvaders.entity.client.bobrittobandito.BobrittoBanditoRenderer;
-import shadowshiftstudio.animalinvaders.entity.custom.potapimmo.PotapimmoEntity;
 import shadowshiftstudio.animalinvaders.item.ModCreativeModeTabs;
 import shadowshiftstudio.animalinvaders.item.ModItems;
 import shadowshiftstudio.animalinvaders.biome.ModBiomeModifiers;
+import shadowshiftstudio.animalinvaders.effect.ModEffects;
+import shadowshiftstudio.animalinvaders.sound.ModSounds;
 
 @Mod(AnimalInvaders.MOD_ID)
 public class AnimalInvaders
@@ -45,6 +42,8 @@ public class AnimalInvaders
         ModCreativeModeTabs.register(modEventBus);
         ModEntities.register(modEventBus);
         ModBiomeModifiers.register(modEventBus);
+        ModEffects.register(modEventBus); // Register custom effects
+        ModSounds.register(modEventBus); // Register custom sounds
 
         context.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
     }

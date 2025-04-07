@@ -1,0 +1,9 @@
+{
+  "excalibur_special": {
+    "category": "player",
+    "sounds": [
+      "animalinvaders:excalibur_special"
+    ],
+    "subtitle": "Excalibur unleashes divine power"
+  }
+}

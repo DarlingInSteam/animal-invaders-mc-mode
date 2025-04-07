@@ -21,6 +21,10 @@ public class ModCreativeModeTabs {
                     .displayItems((pParameters, pOutput) -> {
                         // Добавляем наш меч GoydaSlayer в эту вкладку
                         pOutput.accept(ModItems.GOYDA_SLAYER.get());
+                        // Добавляем наш меч Festering Desire в эту вкладку
+                        pOutput.accept(ModItems.FESTERING_DESIRE.get());
+                        // Добавляем наш меч Excalibur в эту вкладку
+                        pOutput.accept(ModItems.EXCALIBUR.get());
                         // Сюда можно добавить другие предметы в будущем
                     })
                     .build()
