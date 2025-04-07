@@ -8,6 +8,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import shadowshiftstudio.animalinvaders.AnimalInvaders;
 import shadowshiftstudio.animalinvaders.entity.custom.bobrittobandito.BobrittoBanditoEntity;
+import shadowshiftstudio.animalinvaders.entity.custom.bobrittobandito.BobrittoBanditoLeaderEntity;
 import shadowshiftstudio.animalinvaders.entity.custom.bullet.BulletEntity;
 import shadowshiftstudio.animalinvaders.entity.custom.potapimmo.PotapimmoEntity;
 
@@ -22,6 +23,12 @@ public class ModEntities {
     public static final RegistryObject<EntityType<BobrittoBanditoEntity>> BOBRITO_BANDITO =
             ENTITIES.register("bobrittobandito", () -> EntityType.Builder.of(BobrittoBanditoEntity::new, MobCategory.MONSTER)
                     .sized(1f, 1.8f).build("bobrittobandito"));
+                    
+    public static final RegistryObject<EntityType<BobrittoBanditoLeaderEntity>> BOBRITO_BANDITO_LEADER =
+            ENTITIES.register("bobrittobandito_leader", () -> EntityType.Builder
+                    .of(BobrittoBanditoLeaderEntity::new, MobCategory.MONSTER)
+                    .sized(1.2f, 2.1f)  // Размер модели увеличен на 20% от обычного бобритто
+                    .build("bobrittobandito_leader"));
                     
     public static final RegistryObject<EntityType<BulletEntity>> BULLET =
             ENTITIES.register("bullet", () -> EntityType.Builder.<BulletEntity>of(BulletEntity::new, MobCategory.MISC)

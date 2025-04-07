@@ -509,4 +509,30 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
         // Убеждаемся, что бобритто не исчезнет
         this.setPersistenceRequired();
     }
+    
+    /**
+     * Увеличивает характеристики лидера патруля (x1.5 здоровье и урон)
+     */
+    public void boostLeaderStats() {
+        // Увеличиваем здоровье в 1.5 раза
+        float currentMaxHealth = this.getMaxHealth();
+        float newMaxHealth = currentMaxHealth * 1.5f;
+        
+        // Устанавливаем максимальное здоровье через атрибут
+        this.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH)
+            .setBaseValue(newMaxHealth);
+        
+        // Исцеляем до полного здоровья (как бонус за назначение лидером)
+        this.setHealth(this.getMaxHealth());
+        
+        // Увеличиваем урон в 1.5 раза
+        double currentAttackDamage = this.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE).getBaseValue();
+        this.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE)
+            .setBaseValue(currentAttackDamage * 1.5);
+        
+        // Увеличиваем скорость немного (на 10%)
+        double currentSpeed = this.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED).getBaseValue();
+        this.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED)
+            .setBaseValue(currentSpeed * 1.1);
+    }
 }

@@ -47,9 +47,10 @@ public class BobrittoFollowLeaderGoal extends Goal {
             return false;
         }
 
-        // Проверить расстояние до лидера
+        // Проверить расстояние до лидера - следуем за лидером если мы дальше minDist
+        // (уменьшили с maxDist до minDist, чтобы следовать постоянно, а не только когда слишком далеко)
         double distSq = bobrito.distanceToSqr(leader);
-        return distSq > (double)(this.maxDist * this.maxDist);
+        return distSq > (double)(this.minDist * this.minDist);
     }
 
     @Override
@@ -70,9 +71,9 @@ public class BobrittoFollowLeaderGoal extends Goal {
             return false;
         }
 
-        // Проверить, достаточно ли близко к лидеру
+        // Продолжаем следовать, пока не окажемся совсем рядом (меньше 1 блока)
         double distSq = bobrito.distanceToSqr(leader);
-        return distSq > (double)(this.minDist * this.minDist);
+        return distSq > 1.0;
     }
 
     @Override

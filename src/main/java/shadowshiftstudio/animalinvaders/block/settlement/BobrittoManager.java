@@ -139,6 +139,13 @@ public class BobrittoManager {
             this.leader = leader;
             if (leader != null) {
                 leader.setPatrolLeader(true);
+                
+                // Усиливаем характеристики лидера и генерируем маршрут патрулирования
+                leader.boostLeaderStats();
+                leader.generatePatrolPath();
+                
+                System.out.println("Created patrol group with leader: " + leader.getUUID() + 
+                                  " Health: " + leader.getHealth() + "/" + leader.getMaxHealth());
             }
         }
         
@@ -176,17 +183,40 @@ public class BobrittoManager {
         
         private void promoteNewLeader() {
             if (!followers.isEmpty()) {
-                // Promote first follower to leader
-                BobrittoBanditoEntity newLeader = followers.remove(0);
-                if (newLeader != null && newLeader.isAlive()) {
-                    leader = newLeader;
-                    leader.setPatrolLeader(true);
-                    leader.setPatrolFollower(false);
+                // Находим лучшего кандидата (с наибольшим здоровьем)
+                followers.sort((b1, b2) -> Float.compare(b2.getHealth(), b1.getHealth()));
+                
+                // Выбираем первого подходящего последователя для продвижения до лидера
+                BobrittoBanditoEntity followerBobrito = followers.remove(0);
+                
+                if (followerBobrito != null && followerBobrito.isAlive()) {
+                    System.out.println("Promoting new leader: " + followerBobrito.getUUID());
                     
-                    // Update all followers to follow new leader
+                    // Трансформируем обычного Бобритто в особую сущность лидера
+                    BobrittoBanditoEntity newLeader = shadowshiftstudio.animalinvaders.entity.custom.bobrittobandito.BobrittoBanditoLeaderEntity
+                            .transformFromRegular(followerBobrito);
+                    
+                    if (newLeader == null) {
+                        // Если трансформация не удалась, используем обычного Бобритто
+                        newLeader = followerBobrito;
+                        newLeader.setPatrolLeader(true);
+                        newLeader.setPatrolFollower(false);
+                        newLeader.boostLeaderStats();
+                    }
+                    
+                    // Устанавливаем нового лидера
+                    leader = newLeader;
+                    
+                    // Обновляем всех последователей, чтобы они следовали за новым лидером
                     for (BobrittoBanditoEntity follower : followers) {
                         follower.setLeaderUUID(leader.getUUID());
                     }
+                    
+                    // Генерируем новые точки патрулирования для нового лидера
+                    leader.generatePatrolPath();
+                    leader.setPatrolState(patrolState);
+                    
+                    System.out.println("New leader stats: Health=" + leader.getHealth() + "/" + leader.getMaxHealth());
                 }
             }
         }
@@ -270,16 +300,56 @@ public class BobrittoManager {
             // First, collect all non-patrol bobritos
             List<BobrittoBanditoEntity> availableBobritos = bobritos.stream()
                     .filter(bobrito -> !bobrito.isPatrolLeader() && !bobrito.isPatrolFollower())
-                    .toList();
+                    .collect(java.util.stream.Collectors.toList()); // Используем изменяемый список
             
             if (availableBobritos.size() >= PATROL_SIZE) {
-                // Select a leader
-                BobrittoBanditoEntity leader = availableBobritos.get(0);
+                // Выбираем обычного Бобритто для превращения в лидера
+                BobrittoBanditoEntity regularBobrito = availableBobritos.remove(0);
+                
+                // Трансформируем обычного Бобритто в особую сущность лидера
+                BobrittoBanditoEntity leader = shadowshiftstudio.animalinvaders.entity.custom.bobrittobandito.BobrittoBanditoLeaderEntity
+                        .transformFromRegular(regularBobrito);
+                
+                if (leader == null) {
+                    // Если трансформация не удалась, используем обычного Бобритто
+                    leader = regularBobrito;
+                    leader.setPatrolLeader(true);
+                    leader.boostLeaderStats();
+                }
+                
                 PatrolGroup newGroup = new PatrolGroup(leader);
                 
-                // Add followers
-                for (int i = 1; i < PATROL_SIZE && i < availableBobritos.size(); i++) {
-                    newGroup.addFollower(availableBobritos.get(i));
+                // Логируем создание группы и лидера
+                System.out.println("Creating new patrol group with leader: " + leader.getUUID());
+                
+                // Add followers - выбираем ближайших к лидеру, чтобы они были физически рядом
+                BobrittoBanditoEntity finalLeader = leader;
+                availableBobritos.sort((b1, b2) -> {
+                    double d1 = b1.distanceToSqr(finalLeader);
+                    double d2 = b2.distanceToSqr(finalLeader);
+                    return Double.compare(d1, d2);
+                });
+                
+                // Добавляем ближайших как последователей
+                for (int i = 0; i < PATROL_SIZE - 1 && i < availableBobritos.size(); i++) {
+                    BobrittoBanditoEntity follower = availableBobritos.get(i);
+                    newGroup.addFollower(follower);
+                    System.out.println("Added follower: " + follower.getUUID() + " to leader: " + leader.getUUID());
+                    
+                    // Телепортируем последователей ближе к лидеру (если они слишком далеко)
+                    if (follower.distanceToSqr(leader) > 100) { // Если дальше 10 блоков
+                        // Вычисляем позицию рядом с лидером
+                        double angle = 2 * Math.PI * i / (PATROL_SIZE - 1);
+                        double offsetX = Math.cos(angle) * 2.0; // 2 блока от лидера
+                        double offsetZ = Math.sin(angle) * 2.0;
+                        
+                        follower.teleportTo(
+                            leader.getX() + offsetX,
+                            leader.getY(),
+                            leader.getZ() + offsetZ
+                        );
+                        System.out.println("Teleported follower closer to leader");
+                    }
                 }
                 
                 patrolGroups.add(newGroup);

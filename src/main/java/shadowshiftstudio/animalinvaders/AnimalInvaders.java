@@ -86,6 +86,7 @@ public class AnimalInvaders
         {
             EntityRenderers.register(ModEntities.POTAPIMMO.get(), PotapimmoRenderer::new);
             EntityRenderers.register(ModEntities.BOBRITO_BANDITO.get(), BobrittoBanditoRenderer::new);
+            EntityRenderers.register(ModEntities.BOBRITO_BANDITO_LEADER.get(), shadowshiftstudio.animalinvaders.entity.client.bobrittobandito.BobrittoBanditoLeaderRenderer::new);
             EntityRenderers.register(ModEntities.BULLET.get(), BulletRenderer::new);
         }
     }
