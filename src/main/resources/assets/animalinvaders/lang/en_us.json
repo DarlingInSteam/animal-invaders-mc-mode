@@ -15,5 +15,19 @@
   
   "effect.animalinvaders.divine_protection": "Divine Protection",
   "effect.animalinvaders.last_stand_effect": "Last Stand",
-  "creativemodetab.animal_invaders_tab": "Animal Invaders"
+  "creativemodetab.animal_invaders_tab": "Animal Invaders",
+  
+  "advancement.animalinvaders.root.title": "Legendary Arsenal",
+  "advancement.animalinvaders.root.description": "Begin your quest to collect legendary weapons of immense power",
+  
+  "advancement.animalinvaders.durandal.title": "Durandal Forged!",
+  "advancement.animalinvaders.durandal.description": "You have crafted the legendary blade Durandal, a weapon of unmatched power!",
+  "advancement.animalinvaders.excalibur.title": "Excalibur Awakened!",
+  "advancement.animalinvaders.excalibur.description": "The mythical sword Excalibur is now in your hands. Wield it wisely!",
+  "advancement.animalinvaders.festering_desire.title": "Festering Desire Unleashed!",
+  "advancement.animalinvaders.festering_desire.description": "You have brought forth the Festering Desire, a blade of dark intent!",
+  "advancement.animalinvaders.gramr.title": "Gramr Reforged!",
+  "advancement.animalinvaders.gramr.description": "The legendary sword Gramr has been reforged. Its power is yours to command!",
+  "advancement.animalinvaders.legendary_collector.title": "Master of Legends",
+  "advancement.animalinvaders.legendary_collector.description": "Collect all four legendary weapons and become truly unstoppable!"
 }

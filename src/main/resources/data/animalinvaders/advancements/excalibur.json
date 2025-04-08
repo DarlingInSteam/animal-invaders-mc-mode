@@ -1,0 +1,30 @@
+{
+  "display": {
+    "icon": {
+      "item": "animalinvaders:excalibur"
+    },
+    "title": {
+      "translate": "advancement.animalinvaders.excalibur.title"
+    },
+    "description": {
+      "translate": "advancement.animalinvaders.excalibur.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "parent": "animalinvaders:root",
+  "criteria": {
+    "has_excalibur": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": ["animalinvaders:excalibur"]
+          }
+        ]
+      }
+    }
+  }
+}

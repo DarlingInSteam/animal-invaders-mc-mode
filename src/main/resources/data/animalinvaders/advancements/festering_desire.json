@@ -1,0 +1,30 @@
+{
+  "display": {
+    "icon": {
+      "item": "animalinvaders:festering_desire"
+    },
+    "title": {
+      "translate": "advancement.animalinvaders.festering_desire.title"
+    },
+    "description": {
+      "translate": "advancement.animalinvaders.festering_desire.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "parent": "animalinvaders:root",
+  "criteria": {
+    "has_festering_desire": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": ["animalinvaders:festering_desire"]
+          }
+        ]
+      }
+    }
+  }
+}

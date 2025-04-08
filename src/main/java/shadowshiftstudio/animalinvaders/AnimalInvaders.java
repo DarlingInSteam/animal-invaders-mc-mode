@@ -16,6 +16,7 @@ import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.slf4j.Logger;
+import shadowshiftstudio.animalinvaders.advancement.ModTriggers;
 import shadowshiftstudio.animalinvaders.block.ModBlocks;
 import shadowshiftstudio.animalinvaders.entity.ModEntities;
 import shadowshiftstudio.animalinvaders.entity.client.bullet.BulletRenderer;
@@ -46,6 +47,9 @@ public class AnimalInvaders
         ModBiomeModifiers.register(modEventBus);
         ModEffects.register(modEventBus); // Register custom effects
         ModSounds.register(modEventBus); // Register custom sounds
+        
+        // Register our event handler classes
+        MinecraftForge.EVENT_BUS.register(shadowshiftstudio.animalinvaders.advancement.AdvancementEvents.class);
 
         context.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
     }

@@ -1,0 +1,30 @@
+{
+  "display": {
+    "icon": {
+      "item": "animalinvaders:gramr"
+    },
+    "title": {
+      "translate": "advancement.animalinvaders.gramr.title"
+    },
+    "description": {
+      "translate": "advancement.animalinvaders.gramr.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "parent": "animalinvaders:root",
+  "criteria": {
+    "has_gramr": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": ["animalinvaders:gramr"]
+          }
+        ]
+      }
+    }
+  }
+}

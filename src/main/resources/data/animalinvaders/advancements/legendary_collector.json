@@ -1,0 +1,69 @@
+{
+  "display": {
+    "icon": {
+      "item": "minecraft:nether_star"
+    },
+    "title": {
+      "translate": "advancement.animalinvaders.legendary_collector.title"
+    },
+    "description": {
+      "translate": "advancement.animalinvaders.legendary_collector.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "parent": "animalinvaders:root",
+  "criteria": {
+    "has_durandal": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": ["animalinvaders:durandal"]
+          }
+        ]
+      }
+    },
+    "has_excalibur": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": ["animalinvaders:excalibur"]
+          }
+        ]
+      }
+    },
+    "has_festering_desire": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": ["animalinvaders:festering_desire"]
+          }
+        ]
+      }
+    },
+    "has_gramr": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": ["animalinvaders:gramr"]
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    ["has_durandal"],
+    ["has_excalibur"],
+    ["has_festering_desire"],
+    ["has_gramr"]
+  ],
+  "rewards": {
+    "experience": 100
+  }
+}

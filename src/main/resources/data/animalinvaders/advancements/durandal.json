@@ -1,0 +1,30 @@
+{
+  "display": {
+    "icon": {
+      "item": "animalinvaders:durandal"
+    },
+    "title": {
+      "translate": "advancement.animalinvaders.durandal.title"
+    },
+    "description": {
+      "translate": "advancement.animalinvaders.durandal.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "parent": "animalinvaders:root",
+  "criteria": {
+    "has_durandal": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": ["animalinvaders:durandal"]
+          }
+        ]
+      }
+    }
+  }
+}
