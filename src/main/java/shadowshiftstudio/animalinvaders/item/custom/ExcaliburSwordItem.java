@@ -1,7 +1,10 @@
 package shadowshiftstudio.animalinvaders.item.custom;
 
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -15,10 +18,14 @@ import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.item.Tier;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import shadowshiftstudio.animalinvaders.effect.ModEffects;
 import shadowshiftstudio.animalinvaders.sound.ModSounds;
+
+import javax.annotation.Nullable;
+import java.util.List;
 
 public class ExcaliburSwordItem extends SwordItem {
     private static final int DIVINE_PROTECTION_DURATION = 10 * 20; // 10 seconds in ticks
@@ -151,5 +158,16 @@ public class ExcaliburSwordItem extends SwordItem {
                 }
             }
         }
+    }
+
+    @Override
+    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
+        if (Screen.hasShiftDown()) {
+            tooltip.add(Component.translatable("item.animalinvaders.excalibur.tooltip").withStyle(ChatFormatting.GRAY));
+        } else {
+            tooltip.add(Component.translatable("item.minecraft.tooltip.hold_shift").withStyle(ChatFormatting.DARK_GRAY));
+        }
+
+        super.appendHoverText(stack, level, tooltip, flag);
     }
 }

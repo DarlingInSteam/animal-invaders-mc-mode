@@ -4,6 +4,15 @@
   "item.animalinvaders.excalibur": "Excalibur",
   "item.animalinvaders.durandal": "Durandal",
   "item.animalinvaders.gramr": "Gramr",
+  
+  "item.animalinvaders.festering_desire.tooltip": "§5A legendary blade that thirsts for vitality.§r\n§7• §dVampirism:§7 Heals 10% of damage dealt§r\n§7• §dShadow Stealth:§7 Grants invisibility for 5 seconds with increased speed§r\n§7  §8(Right-click, 1 minute cooldown)§r",
+  "item.animalinvaders.excalibur.tooltip": "§bA legendary sword of divine radiance.§r\n§7• §eLightning Strike:§7 Next attack after activation calls lightning§r\n§7• §eDivine Protection:§7 30% damage reduction and immunity to negative effects for 10 seconds§r\n§7  §8(Right-click, 1 minute cooldown)§r",
+  "item.animalinvaders.durandal.tooltip": "§eA legendary blade of valor and perseverance.§r\n§7• §6Last Stand:§7 Health cannot drop below 5 hearts and attacks deal 30% more damage for 5 seconds§r\n§7• §6Explosive Strike:§7 Ready an explosive attack dealing TNT-level damage§r\n§7  §8(Right-click, 1 minute cooldown)§r",
+  "item.animalinvaders.gramr.tooltip": "§cA legendary blade forged in dragon fire.§r\n§7• §4Fafnir's Immunity:§7 Passive fire and lava resistance§r\n§7• §4Dragon's Breath:§7 Sets all hostile mobs within 5 blocks on fire§r\n§7• §4Dragon's Heart:§7 Grants 5 additional hearts for 10 seconds§r\n§7  §8(Right-click, 1 minute cooldown)§r",
+  
+  "item.animalinvaders.legendary_sword.crafted": "§d§lThe legendary sword §r§6%2$s §r§d§lhas been forged by %1$s!",
+  "item.animalinvaders.legendary_sword.already_crafted": "§cThis legendary sword has already been forged in this world!",
+  
   "effect.animalinvaders.divine_protection": "Divine Protection",
   "effect.animalinvaders.last_stand_effect": "Last Stand",
   "creativemodetab.animal_invaders_tab": "Animal Invaders"
