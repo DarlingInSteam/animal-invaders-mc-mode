@@ -14,6 +14,10 @@ public class ModEffects {
     // Register the Divine Protection effect
     public static final RegistryObject<MobEffect> DIVINE_PROTECTION = MOB_EFFECTS.register("divine_protection",
             () -> new DivineProtectionEffect());
+            
+    // Register the Last Stand effect
+    public static final RegistryObject<MobEffect> LAST_STAND = MOB_EFFECTS.register("last_stand_effect",
+            () -> new LastStandEffect());
 
     public static void register(IEventBus eventBus) {
         MOB_EFFECTS.register(eventBus);

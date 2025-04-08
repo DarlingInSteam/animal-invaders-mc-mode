@@ -26,6 +26,9 @@ public class ModCreativeModeTabs {
                         pOutput.accept(ModItems.FESTERING_DESIRE.get());
                         // Добавляем наш меч Excalibur в эту вкладку
                         pOutput.accept(ModItems.EXCALIBUR.get());
+                        pOutput.accept(ModItems.DURANDAL.get());
+                        // Добавляем наш меч Gramr в эту вкладку
+                        pOutput.accept(ModItems.GRAMR.get());
                         
                         // Добавляем блоки поселений бобритто
                         pOutput.accept(ModBlocks.BOBRITO_TOWN_HALL.get());

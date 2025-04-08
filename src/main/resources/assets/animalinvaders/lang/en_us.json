@@ -2,6 +2,9 @@
   "item.animalinvaders.goyda_slayer": "GoydaSlayer",
   "item.animalinvaders.festering_desire": "Festering Desire",
   "item.animalinvaders.excalibur": "Excalibur",
+  "item.animalinvaders.durandal": "Durandal",
+  "item.animalinvaders.gramr": "Gramr",
   "effect.animalinvaders.divine_protection": "Divine Protection",
+  "effect.animalinvaders.last_stand_effect": "Last Stand",
   "creativemodetab.animal_invaders_tab": "Animal Invaders"
 }

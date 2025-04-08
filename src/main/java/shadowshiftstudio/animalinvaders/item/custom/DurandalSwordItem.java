@@ -2,37 +2,35 @@ package shadowshiftstudio.animalinvaders.item.custom;
 
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.item.Tier;
-import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
+import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import shadowshiftstudio.animalinvaders.effect.ModEffects;
 
-public class FesteringDesireSwordItem extends SwordItem {
-    private static final int INVISIBILITY_DURATION = 5 * 20; // 5 seconds in ticks
-    private static final int SPEED_DURATION = 6 * 20; // 6 seconds in ticks
-    private static final int SPEED_AMPLIFIER = 1; // Speed II (0 = Speed I, 1 = Speed II)
+public class DurandalSwordItem extends SwordItem {
+    private static final int LAST_STAND_DURATION = 5 * 20; // 5 seconds in ticks
     private static final int COOLDOWN_DURATION = 60 * 20; // 60 seconds in ticks
-    private static final float VAMPIRE_HEAL_PERCENT = 0.1f; // 10% healing from damage dealt
-    
     private static final int PARTICLE_DURATION = 10 * 20; // 10 seconds in ticks
-    private static final int PARTICLES_PER_TICK = 3; // Number of particles per tick
-    private static final double PARTICLE_RADIUS = 1.5D; // Radius around the player
-    private static final double PARTICLE_Y_OFFSET = 1.0D; // Y offset from the player's feet
+    private static final int PARTICLES_PER_TICK = 3; // Particles per tick
+    private static final double PARTICLE_RADIUS = 1.5D; // Radius around player
+    private static final double PARTICLE_Y_OFFSET = 1.0D; // Y offset from player's feet
+    
+    private boolean explosiveAttackReady = false;
     private int particleTimer = 0;
     private Player activePlayer = null;
 
-    public FesteringDesireSwordItem(Tier tier, int attackDamageModifier, float attackSpeedModifier, Properties properties) {
+    public DurandalSwordItem(Tier tier, int attackDamageModifier, float attackSpeedModifier, Properties properties) {
         super(tier, attackDamageModifier, attackSpeedModifier, properties);
     }
 
@@ -41,13 +39,17 @@ public class FesteringDesireSwordItem extends SwordItem {
         // Call the parent method first
         boolean result = super.hurtEnemy(stack, target, attacker);
         
-        // Handle vampire effect - heal for 10% of damage dealt
-        if (result && attacker instanceof Player player) {
-            float damageDealt = getDamage();
-            float healAmount = damageDealt * VAMPIRE_HEAL_PERCENT;
+        // Handle explosive attack if ready
+        if (result && explosiveAttackReady && attacker instanceof Player && !attacker.level().isClientSide) {
+            // Create explosion at target position
+            Level level = target.level();
+            // Fixed method call to match the correct signature in Minecraft 1.20.1
+            level.explode(null, target.getX(), target.getY(), target.getZ(), 
+                    4.0F, // Power like TNT
+                    Level.ExplosionInteraction.NONE); // No block damage
             
-            // Heal the player
-            player.heal(healAmount);
+            // Reset the explosive attack ready state
+            explosiveAttackReady = false;
         }
         
         return result;
@@ -59,10 +61,13 @@ public class FesteringDesireSwordItem extends SwordItem {
         
         // Check cooldown
         if (!player.getCooldowns().isOnCooldown(this)) {
-            // Apply invisibility and speed effects
+            // Apply effects only on server side
             if (!level.isClientSide) {
-                player.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, INVISIBILITY_DURATION));
-                player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, SPEED_DURATION, SPEED_AMPLIFIER));
+                // Apply Last Stand effect
+                player.addEffect(new MobEffectInstance(ModEffects.LAST_STAND.get(), LAST_STAND_DURATION));
+                
+                // Prepare the sword for an explosive attack
+                explosiveAttackReady = true;
                 
                 // Start particle effect
                 particleTimer = PARTICLE_DURATION;
@@ -82,14 +87,14 @@ public class FesteringDesireSwordItem extends SwordItem {
     public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
         super.inventoryTick(stack, level, entity, slotId, isSelected);
         
-        // Generate particles only on the server
+        // Generate particles only on server
         if (!level.isClientSide && entity instanceof Player && particleTimer > 0) {
             if (activePlayer == entity) {
                 ServerLevel serverLevel = (ServerLevel) level;
                 Player player = (Player) entity;
                 Vec3 playerPos = player.position();
                 
-                // Create dark particles
+                // Create gold particles
                 for (int i = 0; i < PARTICLES_PER_TICK; i++) {
                     // Random coordinates in a circle around the player
                     double angle = level.random.nextDouble() * Math.PI * 2;
@@ -98,31 +103,28 @@ public class FesteringDesireSwordItem extends SwordItem {
                     double z = playerPos.z + Math.sin(angle) * radius;
                     double y = playerPos.y + PARTICLE_Y_OFFSET + level.random.nextDouble() * 2.0;
                     
-                    // Select dark particles
+                    // Golden particles
                     ParticleOptions particle;
-                    int particleChoice = level.random.nextInt(4);
+                    int particleChoice = level.random.nextInt(3);
                     switch (particleChoice) {
                         case 0:
-                            particle = ParticleTypes.SMOKE;
+                            particle = ParticleTypes.GLOW;
                             break;
                         case 1:
-                            particle = ParticleTypes.SOUL;
-                            break;
-                        case 2:
-                            particle = ParticleTypes.ASH;
+                            particle = ParticleTypes.FLAME;
                             break;
                         default:
-                            particle = ParticleTypes.WITCH;
+                            particle = ParticleTypes.SCRAPE;
                             break;
                     }
                     
-                    // Add particle to the world with zero velocity to keep it stationary
+                    // Add particle to the world with zero velocity
                     serverLevel.sendParticles(particle, x, y, z, 1, 0, 0, 0, 0);
                 }
                 
                 particleTimer--;
                 
-                // Reset active player if timer ends
+                // Reset active player if timer expires
                 if (particleTimer <= 0) {
                     activePlayer = null;
                 }

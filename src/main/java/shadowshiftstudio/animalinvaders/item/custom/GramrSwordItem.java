@@ -7,50 +7,40 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.item.Tier;
-import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
-public class FesteringDesireSwordItem extends SwordItem {
-    private static final int INVISIBILITY_DURATION = 5 * 20; // 5 seconds in ticks
-    private static final int SPEED_DURATION = 6 * 20; // 6 seconds in ticks
-    private static final int SPEED_AMPLIFIER = 1; // Speed II (0 = Speed I, 1 = Speed II)
+import java.util.List;
+
+public class GramrSwordItem extends SwordItem {
+    private static final int HEALTH_BOOST_DURATION = 10 * 20; // 10 seconds in ticks
     private static final int COOLDOWN_DURATION = 60 * 20; // 60 seconds in ticks
-    private static final float VAMPIRE_HEAL_PERCENT = 0.1f; // 10% healing from damage dealt
-    
     private static final int PARTICLE_DURATION = 10 * 20; // 10 seconds in ticks
-    private static final int PARTICLES_PER_TICK = 3; // Number of particles per tick
-    private static final double PARTICLE_RADIUS = 1.5D; // Radius around the player
-    private static final double PARTICLE_Y_OFFSET = 1.0D; // Y offset from the player's feet
+    private static final int PARTICLES_PER_TICK = 3; // Particles per tick
+    private static final double PARTICLE_RADIUS = 1.5D; // Radius around player
+    private static final double PARTICLE_Y_OFFSET = 1.0D; // Y offset from player's feet
+    private static final float FAFNIR_BREATH_RADIUS = 5.0F; // Radius for fire breath effect
+    
     private int particleTimer = 0;
     private Player activePlayer = null;
 
-    public FesteringDesireSwordItem(Tier tier, int attackDamageModifier, float attackSpeedModifier, Properties properties) {
+    public GramrSwordItem(Tier tier, int attackDamageModifier, float attackSpeedModifier, Properties properties) {
         super(tier, attackDamageModifier, attackSpeedModifier, properties);
     }
 
     @Override
     public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
         // Call the parent method first
-        boolean result = super.hurtEnemy(stack, target, attacker);
-        
-        // Handle vampire effect - heal for 10% of damage dealt
-        if (result && attacker instanceof Player player) {
-            float damageDealt = getDamage();
-            float healAmount = damageDealt * VAMPIRE_HEAL_PERCENT;
-            
-            // Heal the player
-            player.heal(healAmount);
-        }
-        
-        return result;
+        return super.hurtEnemy(stack, target, attacker);
     }
 
     @Override
@@ -59,14 +49,19 @@ public class FesteringDesireSwordItem extends SwordItem {
         
         // Check cooldown
         if (!player.getCooldowns().isOnCooldown(this)) {
-            // Apply invisibility and speed effects
+            // Apply effects only on server side
             if (!level.isClientSide) {
-                player.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, INVISIBILITY_DURATION));
-                player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, SPEED_DURATION, SPEED_AMPLIFIER));
+                // Apply health boost effect
+                player.addEffect(new MobEffectInstance(MobEffects.HEALTH_BOOST, HEALTH_BOOST_DURATION, 4)); // 4 = 5 hearts
+                // Immediately fill the new hearts
+                player.setHealth(player.getHealth() + 10.0F);
                 
                 // Start particle effect
                 particleTimer = PARTICLE_DURATION;
                 activePlayer = player;
+                
+                // Apply Fafnir's Breath effect - set fire to all mobs within radius
+                applyFafnirBreath(level, player);
                 
                 // Set cooldown
                 player.getCooldowns().addCooldown(this, COOLDOWN_DURATION);
@@ -78,18 +73,51 @@ public class FesteringDesireSwordItem extends SwordItem {
         return InteractionResultHolder.fail(itemstack);
     }
     
+    private void applyFafnirBreath(Level level, Player player) {
+        // Find all living entities within the radius
+        Vec3 playerPos = player.position();
+        AABB areaOfEffect = new AABB(
+            playerPos.x - FAFNIR_BREATH_RADIUS, 
+            playerPos.y - FAFNIR_BREATH_RADIUS, 
+            playerPos.z - FAFNIR_BREATH_RADIUS,
+            playerPos.x + FAFNIR_BREATH_RADIUS, 
+            playerPos.y + FAFNIR_BREATH_RADIUS, 
+            playerPos.z + FAFNIR_BREATH_RADIUS
+        );
+        
+        List<Entity> entities = level.getEntities(player, areaOfEffect);
+        
+        for (Entity entity : entities) {
+            if (entity instanceof LivingEntity living && entity != player) {
+                // Only affect hostile mobs
+                if (entity instanceof Mob mob && mob.getMobType() != MobType.WATER) {
+                    // Set entity on fire for 5 seconds
+                    entity.setSecondsOnFire(5);
+                }
+            }
+        }
+    }
+    
     @Override
     public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
         super.inventoryTick(stack, level, entity, slotId, isSelected);
         
-        // Generate particles only on the server
+        // Apply fire immunity when holding or having in inventory
+        if (entity instanceof Player player) {
+            // Fire resistance when the sword is in inventory
+            if (!player.hasEffect(MobEffects.FIRE_RESISTANCE)) {
+                player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 40, 0, false, false));
+            }
+        }
+        
+        // Generate particles only on server
         if (!level.isClientSide && entity instanceof Player && particleTimer > 0) {
             if (activePlayer == entity) {
                 ServerLevel serverLevel = (ServerLevel) level;
                 Player player = (Player) entity;
                 Vec3 playerPos = player.position();
                 
-                // Create dark particles
+                // Create fire/red particles
                 for (int i = 0; i < PARTICLES_PER_TICK; i++) {
                     // Random coordinates in a circle around the player
                     double angle = level.random.nextDouble() * Math.PI * 2;
@@ -98,31 +126,28 @@ public class FesteringDesireSwordItem extends SwordItem {
                     double z = playerPos.z + Math.sin(angle) * radius;
                     double y = playerPos.y + PARTICLE_Y_OFFSET + level.random.nextDouble() * 2.0;
                     
-                    // Select dark particles
+                    // Red/fire particles
                     ParticleOptions particle;
-                    int particleChoice = level.random.nextInt(4);
+                    int particleChoice = level.random.nextInt(3);
                     switch (particleChoice) {
                         case 0:
-                            particle = ParticleTypes.SMOKE;
+                            particle = ParticleTypes.FLAME;
                             break;
                         case 1:
-                            particle = ParticleTypes.SOUL;
-                            break;
-                        case 2:
-                            particle = ParticleTypes.ASH;
+                            particle = ParticleTypes.LAVA;
                             break;
                         default:
-                            particle = ParticleTypes.WITCH;
+                            particle = ParticleTypes.SMOKE;
                             break;
                     }
                     
-                    // Add particle to the world with zero velocity to keep it stationary
+                    // Add particle to the world with zero velocity
                     serverLevel.sendParticles(particle, x, y, z, 1, 0, 0, 0, 0);
                 }
                 
                 particleTimer--;
                 
-                // Reset active player if timer ends
+                // Reset active player if timer expires
                 if (particleTimer <= 0) {
                     activePlayer = null;
                 }
