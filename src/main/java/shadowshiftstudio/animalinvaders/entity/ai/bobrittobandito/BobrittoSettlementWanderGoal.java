@@ -129,11 +129,11 @@ public class BobrittoSettlementWanderGoal extends RandomStrollGoal {
      */
     private BlockPos findSafePosition(BlockPos center) {
         // Ищем позицию в радиусе 10 блоков от центра
-        int radius = 10;
+        int radius = 25;
         BlockPos safePos = center;
         
         // Пробуем найти безопасное место
-        for (int attempt = 0; attempt < 10; attempt++) {
+        for (int attempt = 0; attempt < 25; attempt++) {
             // Генерируем случайное смещение в пределах радиуса
             int offsetX = bobrito.getRandom().nextInt(radius * 2) - radius;
             int offsetZ = bobrito.getRandom().nextInt(radius * 2) - radius;

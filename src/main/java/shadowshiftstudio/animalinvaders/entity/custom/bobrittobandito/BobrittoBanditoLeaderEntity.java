@@ -98,7 +98,7 @@ public class BobrittoBanditoLeaderEntity extends BobrittoBanditoEntity {
                 .add(Attributes.ATTACK_DAMAGE, 6.0D)      // Урон больше на 50%
                 .add(Attributes.ATTACK_SPEED, 1.2D)       // Скорость атаки больше на 20%
                 .add(Attributes.FOLLOW_RANGE, 64.0D)      // Радиус обзора НАМНОГО больше для эффективной охоты
-                .add(Attributes.MOVEMENT_SPEED, 0.32D)    // Скорость движения больше на 28%
+                .add(Attributes.MOVEMENT_SPEED, 0.25D)    // Скорость движения больше на 28%
                 .add(Attributes.ARMOR, 8.0D)              // Броня больше на 60%
                 .add(Attributes.KNOCKBACK_RESISTANCE, 0.6D) // Сопротивление отбрасыванию больше на 50%
                 .add(Attributes.ATTACK_KNOCKBACK, 3.0D);  // Сила отбрасывания больше на 50%

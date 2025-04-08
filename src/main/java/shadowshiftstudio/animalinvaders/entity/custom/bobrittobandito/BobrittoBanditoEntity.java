@@ -365,17 +365,205 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
     }
 
     /**
-     * Регистрирует бобритто с поселением
+     * Регистрирует бобритто с поселением при спавне, учитывая правильное расположение
      */
     private void registerWithSettlement() {
-        if (!this.level().isClientSide) {
-            // Найти ближайшее поселение
-            BlockPos townHall = SettlementManager.findNearestTownHall(this.level(), this.blockPosition());
-            if (townHall != null) {
-                settlementCenter = townHall;
-                BobrittoManager.registerBobrito(this);
+        if (this.level().isClientSide) {
+            return;
+        }
+        
+        if (settlementCenter == null) {
+            // Пытаемся найти ближайший центр поселения
+            BlockPos nearestTownHall = shadowshiftstudio.animalinvaders.block.settlement.SettlementManager.findNearestTownHall(this.level(), this.blockPosition());
+            if (nearestTownHall != null) {
+                settlementCenter = nearestTownHall;
+                // При спавне без привязки к поселению, убедимся, что спавнимся правильно
+                fixSpawnLocation();
             }
         }
+        
+        if (settlementCenter != null) {
+            // Вызываем правильный метод для регистрации бобрито
+            shadowshiftstudio.animalinvaders.block.settlement.BobrittoManager.registerBobrito(this);
+        }
+    }
+
+    /**
+     * Исправляет позицию бобритто при спавне, чтобы не оказаться внутри здания или на крыше
+     */
+    private void fixSpawnLocation() {
+        if (this.level().isClientSide || settlementCenter == null) {
+            return;
+        }
+        
+        BlockPos currentPos = this.blockPosition();
+        boolean needsRelocation = false;
+        
+        // Проверяем признаки спавна внутри здания или на крыше
+        // 1. Проверка на нахождение в воздухе (без блока под ногами)
+        if (!this.level().getBlockState(currentPos.below()).isSolid()) {
+            needsRelocation = true;
+            System.out.println("Bobrito is spawned in air, needs relocation");
+        }
+        
+        // 2. Проверка на нахождение внутри блока
+        if (!this.level().getBlockState(currentPos).isAir()) {
+            needsRelocation = true;
+            System.out.println("Bobrito is spawned inside a block, needs relocation");
+        }
+        
+        // 3. Проверка на крышу - много блоков снизу и открытое небо сверху
+        int solidBlocksDown = 0;
+        for (int y = 1; y <= 4; y++) {
+            if (this.level().getBlockState(currentPos.below(y)).isSolid()) {
+                solidBlocksDown++;
+            }
+        }
+        
+        int airBlocksUp = 0;
+        for (int y = 1; y <= 4; y++) {
+            if (this.level().getBlockState(currentPos.above(y)).isAir()) {
+                airBlocksUp++;
+            }
+        }
+        
+        // Если под нами много блоков и над нами много воздуха - вероятно, мы на крыше
+        if (solidBlocksDown >= 3 && airBlocksUp >= 3) {
+            needsRelocation = true;
+            System.out.println("Bobrito is spawned on a roof, needs relocation");
+        }
+        
+        // 4. Проверка на нахождение внутри здания - много блоков и сверху и снизу
+        int solidBlocksUp = 0;
+        for (int y = 1; y <= 4; y++) {
+            if (this.level().getBlockState(currentPos.above(y)).isSolid()) {
+                solidBlocksUp++;
+            }
+        }
+        
+        if (solidBlocksDown >= 2 && solidBlocksUp >= 1) {
+            needsRelocation = true;
+            System.out.println("Bobrito is spawned inside a building, needs relocation");
+        }
+        
+        if (needsRelocation) {
+            // Находим безопасное место перед домом
+            BlockPos spawnLocation = findSafeSpawnLocation();
+            if (spawnLocation != null) {
+                this.teleportTo(spawnLocation.getX() + 0.5, spawnLocation.getY(), spawnLocation.getZ() + 0.5);
+                System.out.println("Bobrito relocated to safe location: " + spawnLocation);
+            }
+        }
+    }
+
+    /**
+     * Находит безопасное место для спавна бобритто перед домом
+     */
+    private BlockPos findSafeSpawnLocation() {
+        if (settlementCenter == null) {
+            return null;
+        }
+        
+        // Стратегия 1: Ищем место в радиусе 20-30 блоков от центра поселения (перед домами)
+        int searchRadius = 20 + this.random.nextInt(11); // 20-30 блоков
+        
+        // Проверяем 16 разных направлений от центра
+        for (int attempt = 0; attempt < 16; attempt++) {
+            double angle = 2 * Math.PI * attempt / 16;
+            int xOffset = (int)(Math.cos(angle) * searchRadius);
+            int zOffset = (int)(Math.sin(angle) * searchRadius);
+            
+            BlockPos testPos = new BlockPos(
+                settlementCenter.getX() + xOffset,
+                0, // Высоту определим позже
+                settlementCenter.getZ() + zOffset
+            );
+            
+            // Находим поверхность земли
+            BlockPos groundPos = this.level().getHeightmapPos(
+                net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, 
+                testPos
+            );
+            
+            // Проверяем, что это действительно безопасное место
+            if (isSafeSpawnLocation(groundPos)) {
+                return groundPos;
+            }
+        }
+        
+        // Стратегия 2: Если не нашли безопасное место в первом проходе, 
+        // ищем где-нибудь в окрестностях текущей позиции
+        BlockPos currentPos = this.blockPosition();
+        
+        for (int attempt = 0; attempt < 20; attempt++) {
+            int xOffset = this.random.nextInt(21) - 10; // -10 до +10
+            int zOffset = this.random.nextInt(21) - 10; // -10 до +10
+            
+            BlockPos testPos = new BlockPos(
+                currentPos.getX() + xOffset,
+                0,
+                currentPos.getZ() + zOffset
+            );
+            
+            // Находим поверхность земли
+            BlockPos groundPos = this.level().getHeightmapPos(
+                net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, 
+                testPos
+            );
+            
+            if (isSafeSpawnLocation(groundPos)) {
+                return groundPos;
+            }
+        }
+        
+        // Стратегия 3: Если всё ещё не нашли, просто возьмем случайное место у центра поселения
+        return this.level().getHeightmapPos(
+            net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE,
+            settlementCenter.offset(
+                this.random.nextInt(11) - 5,
+                0,
+                this.random.nextInt(11) - 5
+            )
+        );
+    }
+
+    /**
+     * Проверяет, является ли данная позиция безопасной для спавна бобритто
+     */
+    private boolean isSafeSpawnLocation(BlockPos pos) {
+        // Проверка 1: Блок ниже должен быть твердым
+        if (!this.level().getBlockState(pos.below()).isSolid()) {
+            return false;
+        }
+        
+        // Проверка 2: Блок на уровне ног и головы должен быть воздухом
+        if (!this.level().getBlockState(pos).isAir() || 
+            !this.level().getBlockState(pos.above()).isAir()) {
+            return false;
+        }
+        
+        // Проверка 3: Не должно быть слишком много твердых блоков внизу (признак крыши)
+        int solidBlocksDown = 0;
+        for (int y = 1; y <= 4; y++) {
+            if (this.level().getBlockState(pos.below(y)).isSolid()) {
+                solidBlocksDown++;
+            }
+        }
+        
+        // Проверка 4: Не должно быть твердых блоков вверху (признак внутри здания)
+        int solidBlocksUp = 0;
+        for (int y = 2; y <= 4; y++) {
+            if (this.level().getBlockState(pos.above(y)).isSolid()) {
+                solidBlocksUp++;
+            }
+        }
+        
+        // Если много блоков внизу (>3) и блоков сверху (>0), вероятно, это крыша или внутри здания
+        if (solidBlocksDown >= 3 && solidBlocksUp > 0) {
+            return false;
+        }
+        
+        return true;
     }
 
     /**
@@ -383,22 +571,31 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
      */
     public void generatePatrolPath() {
         if (settlementCenter == null) {
-            // Если центр поселения не найден, используем текущую позицию
-            settlementCenter = SettlementManager.findNearestTownHall(this.level(), this.blockPosition());
-            if (settlementCenter == null) {
-                settlementCenter = this.blockPosition();
-            }
+            return;
         }
-        
-        int radius = 30; // Радиус патрулирования вокруг поселения
-        int pointCount = 8; // Количество точек для патрулирования (восьмиугольник)
+
+        // Увеличиваем радиус для внешнего патрулирования (20-30 блоков от центра)
+        int outerRadius = 20 + random.nextInt(11); // 20-30 блоков
+        int pointCount = 8; // 8 точек для патрулирования периметра
+
         patrolPoints = new Vec3[pointCount];
-        
         for (int i = 0; i < pointCount; i++) {
             double angle = 2 * Math.PI * i / pointCount;
-            int x = settlementCenter.getX() + (int)(Math.cos(angle) * radius);
-            int z = settlementCenter.getZ() + (int)(Math.sin(angle) * radius);
-            int y = this.level().getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
+            int x = settlementCenter.getX() + (int)(Math.cos(angle) * outerRadius);
+            int z = settlementCenter.getZ() + (int)(Math.sin(angle) * outerRadius);
+            
+            // Находим подходящую высоту, чтобы избежать спавна на крышах
+            int y = this.level().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+            
+            // Дополнительная проверка на блоки ниже, чтобы избежать спавна в воздухе
+            BlockPos pos = new BlockPos(x, y, z);
+            if (!this.level().getBlockState(pos.below()).isSolid()) {
+                // Если блок ниже не твердый, найдем ближайший твердый блок вниз
+                while (y > 0 && !this.level().getBlockState(new BlockPos(x, y - 1, z)).isSolid()) {
+                    y--;
+                }
+            }
+            
             patrolPoints[i] = new Vec3(x, y, z);
         }
         
@@ -421,7 +618,27 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
             double angle = this.random.nextDouble() * 2 * Math.PI;
             int x = settlementCenter.getX() + (int)(Math.cos(angle) * this.random.nextInt(radius));
             int z = settlementCenter.getZ() + (int)(Math.sin(angle) * this.random.nextInt(radius));
-            int y = this.level().getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
+            
+            // Находим подходящую высоту, чтобы избежать спавна на крышах/внутри домов
+            int y = this.level().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+            
+            // Проверка на блоки выше и ниже
+            BlockPos pos = new BlockPos(x, y, z);
+            if (!this.level().getBlockState(pos.below()).isSolid() || !this.level().getBlockState(pos).isAir()) {
+                // Если блок ниже не твердый или текущий блок не воздух, корректируем высоту
+                if (!this.level().getBlockState(pos.below()).isSolid()) {
+                    // Ищем ближайший твердый блок вниз
+                    while (y > 0 && !this.level().getBlockState(new BlockPos(x, y - 1, z)).isSolid()) {
+                        y--;
+                    }
+                } else if (!this.level().getBlockState(pos).isAir()) {
+                    // Ищем воздух вверх
+                    while (y < this.level().getMaxBuildHeight() && !this.level().getBlockState(new BlockPos(x, y, z)).isAir()) {
+                        y++;
+                    }
+                }
+            }
+            
             return new Vec3(x, y, z);
         }
         
@@ -435,6 +652,12 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
         }
         
         return target;
+    }
+
+    public void incrementPatrolPoint() {
+        if (patrolPoints != null && patrolPoints.length > 0) {
+            currentPatrolPoint = (currentPatrolPoint + 1) % patrolPoints.length;
+        }
     }
     
     // Геттеры и сеттеры для патрулирования
