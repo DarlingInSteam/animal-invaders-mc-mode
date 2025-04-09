@@ -44,6 +44,10 @@ public class LiriliLarilaEntity extends Animal {
     private static final int ATTACKER_CHECK_FREQUENCY = 10; // Check every 10 ticks (0.5 seconds)
     private static final double SAFE_DISTANCE_SQUARED = 16 * 16; // 16 blocks squared
     
+    // Для автоматического выхода из hiding при непреднамеренном уроне
+    private int noAttackerHidingTimer = 0;
+    private static final int MAX_HIDING_TIME_NO_ATTACKER = 60; // 3 секунды (60 тиков)
+    
     public LiriliLarilaEntity(EntityType<? extends Animal> entityType, Level level) {
         super(entityType, level);
     }
@@ -121,7 +125,36 @@ public class LiriliLarilaEntity extends Animal {
     
     @Override
     public void tick() {
+        // Дополнительная проверка - если моб только что перешел в состояние hiding,
+        // немедленно останавливаем все другие анимации, даже до обработки анимаций
+        if (this.isHiding() && this.level().isClientSide()) {
+            walkAnimationState.stop();
+            idleAnimationState.stop();
+        }
+        
+        // Если моб прячется, жестко останавливаем его движение ПЕРЕД вызовом super.tick(),
+        // чтобы предотвратить любое перемещение в этом тике
+        if (this.isHiding()) {
+            this.setDeltaMovement(0, this.getDeltaMovement().y, 0);
+            
+            // Принудительно сбрасываем путь навигации, чтобы моб не продолжал движение
+            if (this.getNavigation() != null && !this.level().isClientSide()) {
+                this.getNavigation().stop();
+            }
+            
+            // Также отменяем все активные цели AI
+            if (!this.level().isClientSide()) {
+                this.goalSelector.tick();
+                this.targetSelector.tick();
+            }
+        }
+        
         super.tick();
+        
+        // Дублируем остановку движения после super.tick() для гарантии
+        if (this.isHiding() && !this.level().isClientSide()) {
+            this.setDeltaMovement(0, this.getDeltaMovement().y, 0);
+        }
         
         // Если моб прячется, остановим его движение
         if (this.isHiding() && !this.level().isClientSide()) {
@@ -169,12 +202,23 @@ public class LiriliLarilaEntity extends Animal {
         }
         
         // Only run on server side
-        if (!this.level().isClientSide() && this.isHiding() && this.lastAttackerUUID != null) {
-            // Check the attacker's distance periodically
-            lastAttackerCheckTimer++;
-            if (lastAttackerCheckTimer >= ATTACKER_CHECK_FREQUENCY) {
-                lastAttackerCheckTimer = 0;
-                checkAttackerDistance();
+        if (!this.level().isClientSide() && this.isHiding()) {
+            if (this.lastAttackerUUID != null) {
+                // Есть атакующий, проверяем расстояние
+                lastAttackerCheckTimer++;
+                if (lastAttackerCheckTimer >= ATTACKER_CHECK_FREQUENCY) {
+                    lastAttackerCheckTimer = 0;
+                    checkAttackerDistance();
+                }
+            } else {
+                // Нет атакующего (урон от падения и т.п.), используем таймер для выхода
+                noAttackerHidingTimer++;
+                if (noAttackerHidingTimer >= MAX_HIDING_TIME_NO_ATTACKER) {
+                    // Автоматически выходим из состояния hiding через 3 секунды
+                    setHiding(false);
+                    this.hideOutTimeout = 10; // Start hide_out animation
+                    noAttackerHidingTimer = 0;
+                }
             }
         }
     }
@@ -232,12 +276,34 @@ public class LiriliLarilaEntity extends Animal {
             // Start hiding
             setHiding(true);
             
+            // Reset timers
+            noAttackerHidingTimer = 0;
+            
+            // Немедленно останавливаем другие анимации
+            if (this.level().isClientSide()) {
+                walkAnimationState.stop();
+                idleAnimationState.stop();
+                hideOutAnimationState.stop();
+                
+                // И сразу запускаем hide_in
+                hideInAnimationState.start(this.tickCount);
+            }
+            
+            // Жесткая остановка моба
             // Сбрасываем скорость, чтобы моб сразу остановился
             this.setDeltaMovement(0, this.getDeltaMovement().y, 0);
+            
+            // Принудительно сбрасываем путь навигации
+            if (this.getNavigation() != null) {
+                this.getNavigation().stop();
+            }
             
             // Remember attacker for distance checks
             if (source.getEntity() != null) {
                 this.lastAttackerUUID = source.getEntity().getUUID();
+            } else {
+                // Урон без атакующего (падение и т.п.)
+                this.lastAttackerUUID = null;
             }
             
             // Запускаем таймер анимации hide_in
@@ -257,7 +323,21 @@ public class LiriliLarilaEntity extends Animal {
     }
     
     public void setHiding(boolean hiding) {
+        boolean wasHiding = this.isHiding();
         this.entityData.set(HIDING, hiding);
+        
+        // При изменении состояния скрытия, обновляем анимации на клиентской стороне
+        if (this.level().isClientSide()) {
+            if (hiding && !wasHiding) {
+                // Переход в hiding - останавливаем все другие анимации
+                walkAnimationState.stop();
+                idleAnimationState.stop(); 
+                hideOutAnimationState.stop();
+            } else if (!hiding && wasHiding) {
+                // Переход из hiding - останавливаем hide_in анимацию
+                hideInAnimationState.stop();
+            }
+        }
     }
     
     @Override
@@ -296,5 +376,30 @@ public class LiriliLarilaEntity extends Animal {
     @Override
     public LiriliLarilaEntity getBreedOffspring(net.minecraft.server.level.ServerLevel level, AgeableMob otherParent) {
         return null; // No breeding implemented
+    }
+    
+    // Переопределяем метод getNavigation чтобы запретить создание новых путей во время hiding
+    @Override
+    public net.minecraft.world.entity.ai.navigation.PathNavigation getNavigation() {
+        if (this.isHiding()) {
+            // Если в состоянии hiding, используем базовую навигацию, но блокируем новые пути
+            net.minecraft.world.entity.ai.navigation.PathNavigation nav = super.getNavigation();
+            if (nav != null && nav.isInProgress()) {
+                nav.stop();
+            }
+            return nav;
+        }
+        return super.getNavigation();
+    }
+    
+    // Переопределяем метод travel, чтобы предотвратить движение во время hiding
+    @Override
+    public void travel(Vec3 travelVector) {
+        if (this.isHiding()) {
+            // Если моб прячется, запрещаем ему движение по горизонтали
+            super.travel(new Vec3(0, travelVector.y, 0));
+        } else {
+            super.travel(travelVector);
+        }
     }
 }

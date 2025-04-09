@@ -22,6 +22,7 @@ import shadowshiftstudio.animalinvaders.entity.ModEntities;
 import shadowshiftstudio.animalinvaders.entity.client.bullet.BulletRenderer;
 import shadowshiftstudio.animalinvaders.entity.client.potapimmo.PotapimmoRenderer;
 import shadowshiftstudio.animalinvaders.entity.client.bobrittobandito.BobrittoBanditoRenderer;
+import shadowshiftstudio.animalinvaders.entity.client.tralalerotralala.TralaleroTralalaRenderer;
 import shadowshiftstudio.animalinvaders.item.ModCreativeModeTabs;
 import shadowshiftstudio.animalinvaders.item.ModItems;
 import shadowshiftstudio.animalinvaders.biome.ModBiomeModifiers;
@@ -92,6 +93,7 @@ public class AnimalInvaders
             EntityRenderers.register(ModEntities.BOBRITO_BANDITO.get(), BobrittoBanditoRenderer::new);
             EntityRenderers.register(ModEntities.BOBRITO_BANDITO_LEADER.get(), shadowshiftstudio.animalinvaders.entity.client.bobrittobandito.BobrittoBanditoLeaderRenderer::new);
             EntityRenderers.register(ModEntities.BULLET.get(), BulletRenderer::new);
+            EntityRenderers.register(ModEntities.TRALALEROTRALALA.get(), TralaleroTralalaRenderer::new);
         }
     }
 }

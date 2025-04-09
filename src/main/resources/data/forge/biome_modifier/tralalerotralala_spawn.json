@@ -1,0 +1,18 @@
+{
+  "type": "animalinvaders:tralalerotralala_spawn",
+  "biomes": "#minecraft:is_beach",
+  "addition": {
+    "value": {
+      "spawners": {
+        "monster": [
+          {
+            "type": "animalinvaders:tralalerotralala",
+            "weight": 100,
+            "minCount": 2,
+            "maxCount": 4
+          }
+        ]
+      }
+    }
+  }
+}

@@ -15,6 +15,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import shadowshiftstudio.animalinvaders.AnimalInvaders;
 import shadowshiftstudio.animalinvaders.entity.custom.lirililarila.LiriliLarilaEntity;
 import shadowshiftstudio.animalinvaders.entity.custom.potapimmo.PotapimmoEntity;
+import shadowshiftstudio.animalinvaders.entity.custom.tralalerotralala.TralaleroTralalaEntity;
 import net.minecraft.world.entity.monster.Monster;
 
 import java.util.Arrays;
@@ -53,6 +54,12 @@ public class ModSpawns {
             Biomes.ERODED_BADLANDS.location(),
             Biomes.WOODED_BADLANDS.location()
     );
+    
+    private static final List<ResourceLocation> BEACH_BIOMES = Arrays.asList(
+            Biomes.BEACH.location(),
+            Biomes.SNOWY_BEACH.location(),
+            Biomes.STONY_SHORE.location()
+    );
 
     @SubscribeEvent
     public static void registerSpawnPlacements(SpawnPlacementRegisterEvent event) {
@@ -75,6 +82,14 @@ public class ModSpawns {
                 level.getRawBrightness(pos, 0) > 8,
             SpawnPlacementRegisterEvent.Operation.REPLACE
         );
+        
+        event.register(
+            ModEntities.TRALALEROTRALALA.get(),
+            SpawnPlacements.Type.ON_GROUND,
+            Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+            TralaleroTralalaEntity::checkTralaleroTralalaSpawnRules,
+            SpawnPlacementRegisterEvent.Operation.REPLACE
+        );
     }
 
     @SubscribeEvent
@@ -83,6 +98,7 @@ public class ModSpawns {
             LOGGER.info("Adding animal invader mobs to spawn settings");
             LOGGER.info("Potapimmo spawn configured through SpawnPlacementRegisterEvent");
             LOGGER.info("Lirili Larila spawn configured for desert biomes");
+            LOGGER.info("TralaleroTralala spawn configured for beach biomes");
         });
     }
 
@@ -92,5 +108,9 @@ public class ModSpawns {
     
     public static boolean isDesertBiome(ResourceLocation biomeId) {
         return DESERT_BIOMES.contains(biomeId);
+    }
+    
+    public static boolean isBeachBiome(ResourceLocation biomeId) {
+        return BEACH_BIOMES.contains(biomeId);
     }
 }

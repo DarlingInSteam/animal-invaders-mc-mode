@@ -12,6 +12,7 @@ import shadowshiftstudio.animalinvaders.entity.custom.bobrittobandito.BobrittoBa
 import shadowshiftstudio.animalinvaders.entity.custom.bullet.BulletEntity;
 import shadowshiftstudio.animalinvaders.entity.custom.lirililarila.LiriliLarilaEntity;
 import shadowshiftstudio.animalinvaders.entity.custom.potapimmo.PotapimmoEntity;
+import shadowshiftstudio.animalinvaders.entity.custom.tralalerotralala.TralaleroTralalaEntity;
 
 public class ModEntities {
     public static final DeferredRegister<EntityType<?>> ENTITIES =
@@ -36,6 +37,12 @@ public class ModEntities {
                     .of(LiriliLarilaEntity::new, MobCategory.CREATURE)
                     .sized(1.0f, 2.0f)
                     .build("lirililarila"));
+                    
+    public static final RegistryObject<EntityType<TralaleroTralalaEntity>> TRALALEROTRALALA =
+            ENTITIES.register("tralalerotralala", () -> EntityType.Builder
+                    .of(TralaleroTralalaEntity::new, MobCategory.MONSTER)
+                    .sized(1.2f, 1.5f)
+                    .build("tralalerotralala"));
                     
     public static final RegistryObject<EntityType<BulletEntity>> BULLET =
             ENTITIES.register("bullet", () -> EntityType.Builder.<BulletEntity>of(BulletEntity::new, MobCategory.MISC)

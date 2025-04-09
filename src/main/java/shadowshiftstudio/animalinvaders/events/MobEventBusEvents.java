@@ -15,6 +15,8 @@ import shadowshiftstudio.animalinvaders.entity.custom.bobrittobandito.BobrittoBa
 import shadowshiftstudio.animalinvaders.entity.custom.bobrittobandito.BobrittoBanditoLeaderEntity;
 import shadowshiftstudio.animalinvaders.entity.custom.lirililarila.LiriliLarilaEntity;
 import shadowshiftstudio.animalinvaders.entity.custom.potapimmo.PotapimmoEntity;
+import shadowshiftstudio.animalinvaders.entity.custom.tralalerotralala.TralaleroTralalaEntity;
+
 import com.mojang.logging.LogUtils;
 import org.slf4j.Logger;
 
@@ -29,5 +31,6 @@ public class MobEventBusEvents {
         event.put(ModEntities.BOBRITO_BANDITO.get(), BobrittoBanditoEntity.createAttributes().build());
         event.put(ModEntities.BOBRITO_BANDITO_LEADER.get(), BobrittoBanditoLeaderEntity.createAttributes().build());
         event.put(ModEntities.LIRILI_LARILA.get(), LiriliLarilaEntity.createAttributes().build());
+        event.put(ModEntities.TRALALEROTRALALA.get(), TralaleroTralalaEntity.createAttributes().build());
     }
 }
