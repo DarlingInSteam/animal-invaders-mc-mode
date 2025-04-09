@@ -10,6 +10,7 @@ import shadowshiftstudio.animalinvaders.AnimalInvaders;
 import shadowshiftstudio.animalinvaders.entity.custom.bobrittobandito.BobrittoBanditoEntity;
 import shadowshiftstudio.animalinvaders.entity.custom.bobrittobandito.BobrittoBanditoLeaderEntity;
 import shadowshiftstudio.animalinvaders.entity.custom.bullet.BulletEntity;
+import shadowshiftstudio.animalinvaders.entity.custom.lirililarila.LiriliLarilaEntity;
 import shadowshiftstudio.animalinvaders.entity.custom.potapimmo.PotapimmoEntity;
 
 public class ModEntities {
@@ -29,6 +30,12 @@ public class ModEntities {
                     .of(BobrittoBanditoLeaderEntity::new, MobCategory.MONSTER)
                     .sized(1.2f, 2.1f)  // Размер модели увеличен на 20% от обычного бобритто
                     .build("bobrittobandito_leader"));
+
+    public static final RegistryObject<EntityType<LiriliLarilaEntity>> LIRILI_LARILA =
+            ENTITIES.register("lirililarila", () -> EntityType.Builder
+                    .of(LiriliLarilaEntity::new, MobCategory.CREATURE)
+                    .sized(1.0f, 2.0f)
+                    .build("lirililarila"));
                     
     public static final RegistryObject<EntityType<BulletEntity>> BULLET =
             ENTITIES.register("bullet", () -> EntityType.Builder.<BulletEntity>of(BulletEntity::new, MobCategory.MISC)

@@ -6,10 +6,13 @@ import shadowshiftstudio.animalinvaders.entity.client.bobrittobandito.BobrittoBa
 import shadowshiftstudio.animalinvaders.entity.client.bobrittobandito.BobrittoBanditoLeaderModelLayers;
 import shadowshiftstudio.animalinvaders.entity.client.bobrittobandito.BobrittoBanditoModel;
 import shadowshiftstudio.animalinvaders.entity.client.bobrittobandito.BobrittoBanditoModelLayers;
+import shadowshiftstudio.animalinvaders.entity.client.lirililarila.LiriliLarilaModel;
 import shadowshiftstudio.animalinvaders.entity.client.potapimmo.PotapimmoModel;
 import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.fml.common.Mod;
 import shadowshiftstudio.animalinvaders.AnimalInvaders;
+import shadowshiftstudio.animalinvaders.entity.ModEntities;
+import shadowshiftstudio.animalinvaders.entity.client.lirililarila.LiriliLarilaRenderer;
 import shadowshiftstudio.animalinvaders.entity.client.potapimmo.PotapimmoModelLayers;
 
 @Mod.EventBusSubscriber(modid = AnimalInvaders.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
@@ -19,5 +22,11 @@ public class MobEventBusClientEvents {
         event.registerLayerDefinition(PotapimmoModelLayers.POTAPIMMO_LAYER, PotapimmoModel::createBodyLayer);
         event.registerLayerDefinition(BobrittoBanditoModelLayers.BOBRITTO_LAYER, BobrittoBanditoModel::createBodyLayer);
         event.registerLayerDefinition(BobrittoBanditoLeaderModelLayers.BOBRITTO_LEADER_LAYER, BobrittoBanditoLeaderModel::createBodyLayer);
+        event.registerLayerDefinition(LiriliLarilaModel.LAYER_LOCATION, LiriliLarilaModel::createBodyLayer);
+    }
+    
+    @SubscribeEvent
+    public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerEntityRenderer(ModEntities.LIRILI_LARILA.get(), LiriliLarilaRenderer::new);
     }
 }

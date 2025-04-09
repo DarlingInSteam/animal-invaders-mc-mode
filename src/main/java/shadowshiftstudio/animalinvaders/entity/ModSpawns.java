@@ -13,6 +13,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import shadowshiftstudio.animalinvaders.AnimalInvaders;
+import shadowshiftstudio.animalinvaders.entity.custom.lirililarila.LiriliLarilaEntity;
 import shadowshiftstudio.animalinvaders.entity.custom.potapimmo.PotapimmoEntity;
 import net.minecraft.world.entity.monster.Monster;
 
@@ -45,10 +46,17 @@ public class ModSpawns {
             Biomes.OLD_GROWTH_PINE_TAIGA.location(),
             Biomes.OLD_GROWTH_SPRUCE_TAIGA.location()
     );
+    
+    private static final List<ResourceLocation> DESERT_BIOMES = Arrays.asList(
+            Biomes.DESERT.location(),
+            Biomes.BADLANDS.location(),
+            Biomes.ERODED_BADLANDS.location(),
+            Biomes.WOODED_BADLANDS.location()
+    );
 
     @SubscribeEvent
     public static void registerSpawnPlacements(SpawnPlacementRegisterEvent event) {
-        LOGGER.info("Setting up spawn placement rules for Potapimmo");
+        LOGGER.info("Setting up spawn placement rules for Animal Invaders mobs");
         
         event.register(
             ModEntities.POTAPIMMO.get(),
@@ -57,17 +65,32 @@ public class ModSpawns {
             PotapimmoEntity::checkPotapimmoSpawnRules,
             SpawnPlacementRegisterEvent.Operation.REPLACE
         );
+        
+        event.register(
+            ModEntities.LIRILI_LARILA.get(),
+            SpawnPlacements.Type.ON_GROUND,
+            Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+            (entityType, level, spawnType, pos, random) -> 
+                level.getBlockState(pos.below()).isValidSpawn(level, pos.below(), entityType) &&
+                level.getRawBrightness(pos, 0) > 8,
+            SpawnPlacementRegisterEvent.Operation.REPLACE
+        );
     }
 
     @SubscribeEvent
     public static void onCommonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
-            LOGGER.info("Adding Potapimmo to spawn settings");
+            LOGGER.info("Adding animal invader mobs to spawn settings");
             LOGGER.info("Potapimmo spawn configured through SpawnPlacementRegisterEvent");
+            LOGGER.info("Lirili Larila spawn configured for desert biomes");
         });
     }
 
     public static boolean isGreenBiome(ResourceLocation biomeId) {
         return GREEN_BIOMES.contains(biomeId);
+    }
+    
+    public static boolean isDesertBiome(ResourceLocation biomeId) {
+        return DESERT_BIOMES.contains(biomeId);
     }
 }
