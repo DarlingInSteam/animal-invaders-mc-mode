@@ -16,10 +16,16 @@ public class BobrittoSettlementWanderGoal extends RandomStrollGoal {
     private final BobrittoBanditoEntity bobrito;
     private static final int SETTLEMENT_RADIUS = 70; // Радиус перемещения внутри поселения
     private static final int MOVEMENT_INTERVAL = 60; // Частота смены направления в тиках (3 секунды)
-    private static final int MAX_DISTANCE_FROM_CENTER = 80; // Максимальное расстояние от центра поселения (блоки)
+    private static final int MAX_DISTANCE_FROM_CENTER = 300; // Максимальное расстояние от центра поселения (блоки)
     private Vec3 lastPosition; // Последняя позиция для проверки, не вышли ли за пределы
     private boolean isReturningToSettlement = false; // Флаг, указывающий, что бобритто возвращается в поселение
     private int failedReturnAttempts = 0; // Счетчик неудачных попыток вернуться
+    
+    // Новые поля для улучшенной телепортации
+    private boolean teleportCheckActive = false; // Флаг активного процесса проверки перед телепортацией
+    private int teleportCheckTimer = 0; // Таймер для ожидания между проверками (в тиках)
+    private double lastSettlementDistance = 0; // Последнее измеренное расстояние до центра поселения
+    private static final int TELEPORT_CHECK_DELAY = 100; // 5 секунд (100 тиков)
 
     public BobrittoSettlementWanderGoal(BobrittoBanditoEntity bobrito, double speedModifier) {
         super(bobrito, speedModifier, MOVEMENT_INTERVAL);
@@ -108,20 +114,49 @@ public class BobrittoSettlementWanderGoal extends RandomStrollGoal {
      */
     private void teleportToSettlement() {
         BlockPos center = bobrito.getSettlementCenter();
-        if (center != null) {
-            // Находим безопасную позицию для телепортации
-            BlockPos safePos = findSafePosition(center);
-            
-            // Телепортируем бобритто
-            bobrito.teleportTo(safePos.getX() + 0.5, safePos.getY(), safePos.getZ() + 0.5);
-            
-            // Сбрасываем счетчики и флаги
-            this.isReturningToSettlement = false;
-            this.failedReturnAttempts = 0;
-            
-            System.out.println("Bóbrito teleported back to settlement at " + 
-                safePos.getX() + ", " + safePos.getY() + ", " + safePos.getZ());
+        if (center == null) {
+            return;
         }
+        
+        // Проверка телепортации с задержкой - активируем систему проверки прогресса
+        if (!teleportCheckActive) {
+            // Первый вызов - запоминаем текущую дистанцию и активируем проверку
+            teleportCheckActive = true;
+            teleportCheckTimer = TELEPORT_CHECK_DELAY; // 5 секунд ожидания
+            lastSettlementDistance = Math.sqrt(center.distSqr(bobrito.blockPosition())); // текущая удаленность в блоках
+            return;
+        }
+        
+        // Если проверка активна, но таймер еще не истек, просто обновляем его
+        if (teleportCheckTimer > 0) {
+            teleportCheckTimer--;
+            return;
+        }
+        
+        // Таймер истек, проверяем прогресс
+        double currentDistance = Math.sqrt(center.distSqr(bobrito.blockPosition()));
+            
+        // Проверяем, приблизился ли бобритто на 1 блок или больше
+        if (currentDistance <= lastSettlementDistance - 1.0) {
+            // Бобритто приближается к поселению, повторяем процесс
+            teleportCheckTimer = TELEPORT_CHECK_DELAY;
+            lastSettlementDistance = currentDistance;
+            return;
+        }
+        
+        // Если бобритто не приближается к поселению, телепортируем
+        
+        // Находим безопасную позицию для телепортации
+        BlockPos safePos = findSafePosition(center);
+        
+        // Телепортируем бобритто
+        bobrito.teleportTo(safePos.getX() + 0.5, safePos.getY(), safePos.getZ() + 0.5);
+        
+        // Сбрасываем счетчики и флаги
+        this.isReturningToSettlement = false;
+        this.failedReturnAttempts = 0;
+        this.teleportCheckActive = false;
+        this.teleportCheckTimer = 0;
     }
     
     /**

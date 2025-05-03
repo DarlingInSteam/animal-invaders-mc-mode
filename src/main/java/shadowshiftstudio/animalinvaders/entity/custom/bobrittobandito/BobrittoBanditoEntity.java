@@ -8,6 +8,7 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -23,6 +24,7 @@ import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 import shadowshiftstudio.animalinvaders.block.settlement.BobrittoManager;
@@ -41,6 +43,7 @@ import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobCategory;
 
+import javax.annotation.Nullable;
 import java.util.UUID;
 
 public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
@@ -74,6 +77,7 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
     private boolean completedOuterPatrol = false;
     private int registerWithSettlementTimer = 20; // Регистрация с поселением через секунду после спавна
     private BlockPos settlementCenter;
+    private MobSpawnType spawnType = MobSpawnType.NATURAL; // Тип спавна существа, по умолчанию природный
 
     public BobrittoBanditoEntity(EntityType<? extends Monster> entityType, Level level) {
         super(entityType, level);
@@ -369,6 +373,13 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
      */
     private void registerWithSettlement() {
         if (this.level().isClientSide) {
+            return;
+        }
+        
+        // Проверяем, был ли бобритто заспавнен игроком (через яйцо или команду summon)
+        // Если да - не привязываем его к поселению
+        if (spawnType == MobSpawnType.SPAWN_EGG || spawnType == MobSpawnType.COMMAND) {
+            System.out.println("Bobrito was spawned by player, not registering with settlement");
             return;
         }
         
@@ -731,6 +742,7 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
         tag.putBoolean("PatrolLeader", isPatrolLeader());
         tag.putBoolean("PatrolFollower", isPatrolFollower());
         tag.putInt("PatrolState", getPatrolState().ordinal());
+        tag.putString("SpawnType", spawnType.name());
         
         if (leaderUUID != null) {
             tag.putUUID("LeaderUUID", leaderUUID);
@@ -749,6 +761,14 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
         setPatrolLeader(tag.getBoolean("PatrolLeader"));
         setPatrolFollower(tag.getBoolean("PatrolFollower"));
         setPatrolState(BobrittoManager.PatrolState.values()[tag.getInt("PatrolState")]);
+        
+        if (tag.contains("SpawnType")) {
+            try {
+                this.spawnType = MobSpawnType.valueOf(tag.getString("SpawnType"));
+            } catch (IllegalArgumentException e) {
+                this.spawnType = MobSpawnType.NATURAL; // По умолчанию природный спавн
+            }
+        }
         
         if (tag.hasUUID("LeaderUUID")) {
             leaderUUID = tag.getUUID("LeaderUUID");
@@ -803,5 +823,21 @@ public class BobrittoBanditoEntity extends Monster implements RangedAttackMob {
         double currentSpeed = this.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED).getBaseValue();
         this.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED)
             .setBaseValue(currentSpeed * 1.1);
+    }
+
+    /**
+     * Устанавливает тип спавна бобритто (вызывается при финализации спавна)
+     */
+    public void setSpawnType(MobSpawnType type) {
+        this.spawnType = type;
+    }
+
+    @Override
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType spawnType,
+                                        @Nullable SpawnGroupData spawnData, @Nullable CompoundTag tag) {
+        // Сохраняем тип спавна
+        this.spawnType = spawnType;
+        
+        return super.finalizeSpawn(level, difficulty, spawnType, spawnData, tag);
     }
 }

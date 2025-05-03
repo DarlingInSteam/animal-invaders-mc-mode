@@ -28,7 +28,7 @@ public class BobrittoFollowLeaderGoal extends Goal {
     private static final int MAX_STUCK_TIME = 60; // 3 секунды
     private static final int TELEPORT_CHECK_INTERVAL = 40; // 2 секунды
     private static final int TARGET_CHECK_INTERVAL = 10; // Проверка цели каждые 10 тиков (0.5 сек)
-    private static final float EMERGENCY_TELEPORT_DISTANCE = 10.0F;
+    private static final float EMERGENCY_TELEPORT_DISTANCE = 35.0F;
 
     public BobrittoFollowLeaderGoal(BobrittoBanditoEntity bobrito, double speedModifier, float minDist, float maxDist) {
         this.bobrito = bobrito;
